@@ -30,7 +30,7 @@ export const uploadProjectFiles = async (req, res) => {
         const values = files.map(file => [
             projectId,                         // id_proyecto
             file.originalname,                 // nombre_archivo
-            file.path,                         // ruta_archivo 
+            file.relativePath,                         // ruta_archivo 
             detectFileType(file.mimetype),     // tipo_archivo
         ]);
 
