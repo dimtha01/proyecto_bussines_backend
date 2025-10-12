@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestor de Archivos de Proyecto</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #fileList {
+            margin-top: 20px;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+        }
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gestor de Archivos de Proyecto</h1>
+        
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="projectId">ID del Proyecto:</label>
+                <input type="number" id="projectId" required>
+            </div>
+
+            <div class="form-group">
+                <label for="fileInput">Seleccionar Archivos:</label>
+                <input 
+                    type="file" 
+                    id="fileInput" 
+                    multiple 
+                    accept=".pdf,.doc,.docx,.txt,.jpg,.png,.xlsx"
+                >
+            </div>
+
+            <button type="submit">Subir Archivos</button>
+        </form>
+
+        <div id="fileList">
+            <h2>Archivos del Proyecto</h2>
+            <div id="filesContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3000/api';  // Ajusta según tu configuración
+
+        // Manejar subida de archivos
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const projectId = document.getElementById('projectId').value;
+            const fileInput = document.getElementById('fileInput');
+            
+            if (!fileInput.files.length) {
+                alert('Por favor, selecciona al menos un archivo');
+                return;
+            }
+
+            const formData = new FormData();
+            for (let file of fileInput.files) {
+                formData.append('files', file);
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/archivos/proyectos/${projectId}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(result.message);
+                    cargarArchivosProyecto(projectId);
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al subir archivos: ' + error.message);
+            }
+        });
+
+        // Cargar archivos de un proyecto
+        async function cargarArchivosProyecto(projectId) {
+            const filesContainer = document.getElementById('filesContainer');
+            filesContainer.innerHTML = 'Cargando...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/archivos/proyectos/${projectId}/files`);
+                const result = await response.json();
+
+                if (response.ok) {
+                    filesContainer.innerHTML = result.archivos.length 
+                        ? result.archivos.map(archivo => `
+                            <div class="file-item">
+                                <span>${archivo.nombre} (${archivo.tipo})</span>
+                                <div class="file-actions">
+                                    <button onclick="descargarArchivo(${archivo.id})">Descargar</button>
+                                    <button onclick="eliminarArchivo(${archivo.id})">Eliminar</button>
+                                </div>
+                            </div>
+                        `).join('')
+                        : 'No hay archivos en este proyecto';
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                filesContainer.innerHTML = 'Error al cargar archivos';
+            }
+        }
+
+        // Descargar archivo
+        async function descargarArchivo(fileId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/archivos/descargar/${fileId}`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const filename = response.headers.get('Content-Disposition')
+                        .split('filename=')[1];
+                    
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                } else {
+                    const result = await response.json();
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al descargar archivo: ' + error.message);
+            }
+        }
+
+        // Eliminar archivo
+        async function eliminarArchivo(fileId) {
+            if (!confirm('¿Estás seguro de eliminar este archivo?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/archivos/eliminar/${fileId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(result.message);
+                    // Recargar lista de archivos (asume que tienes un projectId en contexto)
+                    cargarArchivosProyecto(document.getElementById('projectId').value);
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al eliminar archivo: ' + error.message);
+            }
+        }
+
+        // Cargar archivos al cambiar el ID de proyecto
+        document.getElementById('projectId').addEventListener('change', (e) => {
+            cargarArchivosProyecto(e.target.value);
+        });
+    </script>
+</body>
+</html>

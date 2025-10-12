@@ -17,6 +17,7 @@ import procedimientoComercialRoutes from './routes/procedimiento_comercial.route
 import authRoutes from "./routes/auth.routes.js"
 import userRoutes from "./routes/user.routes.js"
 import roleRoutes from "./routes/role.routes.js"
+import archivosRoutes from "./routes/archivos.routes.js";
 
 const app = express();
 
@@ -42,6 +43,8 @@ app.use("/api", procedimientoComercialRoutes);
 app.use("/api/auth", authRoutes)
 app.use("/api/users", userRoutes)
 app.use("/api/roles", roleRoutes)
+app.use("/api/archivos", archivosRoutes);
+
 
 // Middleware para manejar rutas no encontradas
 app.use((req, res, next) => {
