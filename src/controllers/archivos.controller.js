@@ -1,6 +1,10 @@
 import { pool } from "../db.js";
 import { detectFileType } from "../middleware/multer.middleware.js";
 import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Controlador para subir archivos a un proyecto específico
 export const uploadProjectFiles = async (req, res) => {
@@ -117,11 +121,15 @@ export const downloadFile = async (req, res) => {
 
         // Buscar información del archivo
         const [files] = await pool.query(
-            `SELECT 
-                nombre_archivo, 
-                ruta_archivo, 
-            FROM archivos 
-            WHERE id = ?`,
+            `
+        SELECT
+            nombre_archivo,
+            ruta_archivo
+        FROM
+            archivos
+        WHERE
+            id = ?
+            `,
             [fileId]
         );
 
@@ -130,10 +138,14 @@ export const downloadFile = async (req, res) => {
         }
 
         const file = files[0];
+        const currentFilePath = file.ruta_archivo;
+
+        const fullPath = path.join(__dirname, '..', currentFilePath);
+        console.log(fullPath);
 
         // Verificar si el archivo existe
         try {
-            await fs.access(file.ruta_archivo);
+            await fs.access(fullPath);
         } catch (error) {
             return res.status(404).json({ message: 'Archivo físico no encontrado' });
         }
@@ -142,7 +154,7 @@ export const downloadFile = async (req, res) => {
         res.setHeader('Content-Disposition', `attachment; filename=${file.nombre_archivo}`);
 
         // Enviar archivo
-        res.download(file.ruta_archivo, file.nombre_archivo, (err) => {
+        res.download(fullPath, file.nombre_archivo, (err) => {
             if (err) {
                 console.error('Error al descargar archivo:', err);
                 res.status(500).json({ message: 'Error al descargar archivo' });
