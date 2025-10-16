@@ -18,10 +18,20 @@ import authRoutes from "./routes/auth.routes.js"
 import userRoutes from "./routes/user.routes.js"
 import roleRoutes from "./routes/role.routes.js"
 import archivosRoutes from "./routes/archivos.routes.js";
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
 // Middlewares
+const uploadsPath = path.join(__dirname, 'uploads');
+console.log("Serviendo desde:", uploadsPath);
+
+app.use('/uploads', express.static(uploadsPath));
+
 app.use(cors()); // Habilita CORS para todas las rutas
 app.use(morgan("dev"));
 app.use(express.json());

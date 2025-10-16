@@ -11,6 +11,7 @@ export const uploadProjectFiles = async (req, res) => {
         // Obtener los archivos subidos
         const files = req.files ?? [];
 
+
         // Validar que al menos un archivo se haya subido
         if (!files.length) {
             return res.status(400).json({ message: 'Debes subir al menos un archivo' });
@@ -61,6 +62,8 @@ export const uploadProjectFiles = async (req, res) => {
 export const getProjectFiles = async (req, res) => {
     try {
         const { projectId } = req.params;
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+
 
         // Validar que el proyecto exista
         const [projectExists] = await pool.query(
@@ -92,7 +95,8 @@ export const getProjectFiles = async (req, res) => {
             nombre: file.nombre_archivo,
             tipo: file.tipo_archivo,
             fechaCreacion: file.fecha_creacion,
-            urlDescarga: `/api/archivos/descargar/${file.id}`
+            urlDescarga: `/api/archivos/descargar/${file.id}`,
+            ruta_archivo: `${baseUrl}/${file.ruta_archivo}`
         }));
 
         res.status(200).json({
