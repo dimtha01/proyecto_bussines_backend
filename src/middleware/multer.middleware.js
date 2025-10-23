@@ -16,11 +16,15 @@ const MIME_GROUPS = {
   pdf: new Set(['application/pdf']),
   document: new Set([
     'application/msword', 
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
-    'application/vnd.ms-excel', 
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',  // Excel (.xls)
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',  // Excel (.xlsx)
+    'application/vnd.ms-excel.sheet.macroEnabled.12',  // Excel con macros (.xlsm)
+    'text/csv',  // CSV
+    'application/vnd.ms-excel.addin.macroEnabled.12'  // Excel add-in (.xlam)
   ])
 };
+
 
 // Detectar tipo de archivo
 export function detectFileType(mimetype) {

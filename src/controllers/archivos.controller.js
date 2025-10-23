@@ -68,7 +68,6 @@ export const getProjectFiles = async (req, res) => {
         const { projectId } = req.params;
         const baseUrl = `${req.protocol}://${req.get('host')}`;
 
-
         // Validar que el proyecto exista
         const [projectExists] = await pool.query(
             'SELECT id FROM proyectos WHERE id = ?',
@@ -93,15 +92,29 @@ export const getProjectFiles = async (req, res) => {
             [projectId]
         );
 
+        // Función para verificar si es una URL externa (YouTube, HTTP, HTTPS)
+        const isExternalUrl = (url) => {
+            if (!url) return false;
+            
+            // Verificar si comienza con http:// o https://
+            return url.startsWith('http://') || url.startsWith('https://');
+        };
+
         // Mapear archivos para incluir URL de descarga
-        const mappedFiles = files.map(file => ({
-            id: file.id,
-            nombre: file.nombre_archivo,
-            tipo: file.tipo_archivo,
-            fechaCreacion: file.fecha_creacion,
-            urlDescarga: `/api/archivos/descargar/${file.id}`,
-            ruta_archivo: `${baseUrl}/${file.ruta_archivo}`
-        }));
+        const mappedFiles = files.map(file => {
+            const isExternal = isExternalUrl(file.ruta_archivo);
+            
+            return {
+                id: file.id,
+                nombre: file.nombre_archivo,
+                tipo: file.tipo_archivo,
+                fechaCreacion: file.fecha_creacion,
+                urlDescarga:`/api/archivos/descargar/${file.id}`,
+                ruta_archivo: isExternal 
+                    ? file.ruta_archivo // URL completa de YouTube
+                    : `${baseUrl}/${file.ruta_archivo}` // URL local con base
+            };
+        });
 
         res.status(200).json({
             total: mappedFiles.length,
@@ -113,6 +126,7 @@ export const getProjectFiles = async (req, res) => {
         res.status(500).json({ message: 'Error interno al obtener archivos' });
     }
 };
+
 
 // Controlador para descargar un archivo
 export const downloadFile = async (req, res) => {
