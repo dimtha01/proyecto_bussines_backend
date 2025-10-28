@@ -4,13 +4,9 @@ import authModel from "./auth.model.js";
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body
-    const { success, message, data, status } = await authModel.userLogin(email, password);
+    const response = await authModel.userLogin(email, password);
 
-    res.status(status).json({
-      success: success,
-      message: message,
-      data: data,
-    });
+    res.status(response.status).json(response);
   } catch (error) {
     console.error("Login error:", error)
     return res.status(500).json({
@@ -26,12 +22,8 @@ export const register = async (req, res) => {
     const { email, password, roleName } = req.body
     console.log(email, password, roleName);
 
-    const { success, message, data, status } = await authModel.userRegister(email, password, roleName);    
-    res.status(201).json({
-      success: success,
-      message: message,
-      data: data,
-    });
+    const response = await authModel.userRegister(email, password, roleName);    
+    res.status(response.status).json(response);
   } catch (error) {
     console.error("Register error:", error)
     res.status(500).json({
@@ -44,13 +36,9 @@ export const register = async (req, res) => {
 
 export const getProfile = async (req, res) => {
   try {
-    const { success, message, data, status } = await authModel.getUserProfile(req.user.id);
+    const response = await authModel.getUserProfile(req.user.id);
 
-    res.status(status).json({
-      success: success,
-      message: message,
-      data: data,
-    });
+    res.status(response.status).json(response);
     
   } catch (error) {
     console.error("Get profile error:", error)
