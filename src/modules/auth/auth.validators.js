@@ -56,4 +56,58 @@ const loginValidator = {
   
 }
 
+export const validateLogin = (req, res, next) => {
+  const { email, password } = req.body
+
+  if (!email || !password) {
+    return res.status(400).json({
+      success: false,
+      message: "Email y password son requeridos"
+    });
+  }
+
+  if (!loginValidator.isEmail(email)) {
+    return res.status(400).json({
+      success: false,
+      message: "Formato de email inválido"
+    });
+  }
+
+  if (!loginValidator.isPassword(password)) {
+    return res.status(400).json({
+      success: false,
+      message: "Password inválido"
+    });
+  }
+
+  next();
+}
+
+export const validateRegister = (req, res, next) => {
+  const { email, password, roleName } = req.body
+
+  if (!email || !password || !roleName) {
+    return res.status(400).json({
+      success: false,
+      message: "Email, password y roleName son requeridos"
+    });
+  }
+
+  if (!loginValidator.isEmail(email)) {
+    return res.status(400).json({
+      success: false,
+      message: "Formato de email inválido"
+    });
+  }
+
+  if (!loginValidator.isPassword(password)) {
+    return res.status(400).json({
+      success: false,
+      message: "Password inválido"
+    });
+  }
+
+  next();
+}
+
 export default loginValidator;
