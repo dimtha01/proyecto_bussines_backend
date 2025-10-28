@@ -1,7 +1,6 @@
 // src/middleware/auth.middleware.js
 import jwt from "jsonwebtoken"
 import { pool } from "../db.js"
-const JWT_SECRET = "6eafa26b974aab4fc374b776435857f559a3396a29c9ac42a4d42d557b6c22ff"
 // Protect routes - verify token
 export const protect = async (req, res, next) => {
   let token;
@@ -13,7 +12,7 @@ export const protect = async (req, res, next) => {
       token = req.headers.authorization.split(" ")[1];
 
       // Verificar el token
-      const decoded = jwt.verify(token, JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
       // Obtener el usuario desde la base de datos usando el ID decodificado del token
       const [users] = await pool.query("SELECT id, email, roleId FROM users WHERE id = ?", [decoded.id]);

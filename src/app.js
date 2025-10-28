@@ -21,6 +21,7 @@ import archivosRoutes from "./routes/archivos.routes.js";
 import youtubeRoutes from "./routes/youtube.routes.js";
 import path from 'path';
 import { fileURLToPath } from 'url';
+import  { authRoutesV2 }  from "./modules/auth/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,6 +57,8 @@ app.use("/api/users", userRoutes)
 app.use("/api/roles", roleRoutes)
 app.use("/api/archivos", archivosRoutes);
 app.use("/api/youtube", youtubeRoutes);
+
+app.use("/api/v2/auth", authRoutesV2)
 
 
 // Middleware para manejar rutas no encontradas

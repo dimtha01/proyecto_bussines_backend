@@ -1,0 +1,1 @@
+export  {default as authRoutesV2 } from "./auth.routes.js";
