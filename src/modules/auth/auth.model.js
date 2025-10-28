@@ -19,15 +19,36 @@ const authModel = {
         return createErrorResponse("Contraseña incorrecta", null, 401)
       }
       const token = generateToken(user.id)
-      return createSuccessResponse("Login exitoso", { token, user: {
-        id: user.id,
-        email: user.email,
-        role: user.roleName,
-        permissionEdit: user.permissionEdit === 1,
-      } }, 200)
+      return createSuccessResponse("Login exitoso", {
+        token, user: {
+          id: user.id,
+          email: user.email,
+          role: user.roleName,
+          permissionEdit: user.permissionEdit === 1,
+        }
+      }, 200)
     } catch (error) {
       return createErrorResponse("Error al iniciar sesión", error, 500)
-    } 
+    }
+  },
+  userRegister: async (email, password, roleName) => {
+    try {
+      const existingUsers = await authService.getUserByEmail(email);
+
+      if (existingUsers !== null) {
+        return createErrorResponse("El usuario ya existe", null, 400)
+      }
+
+      const role = await authService.getRoleByName(roleName)
+      console.log(role)
+      const user = await authService.createUser(email, password, role)
+
+      return createSuccessResponse("Usuario registrado exitosamente", { token: user.token, user: user.user }, 201)
+    }
+    catch (error) {
+      console.log(error)
+      return createErrorResponse("Error al registrar usuario", error, 500)
+    }
   }
 }
 
