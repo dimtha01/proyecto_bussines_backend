@@ -49,6 +49,24 @@ const authModel = {
       console.log(error)
       return createErrorResponse("Error al registrar usuario", error, 500)
     }
+  },
+  getUserProfile: async (id) => {
+    try {
+      const user = await authService.getUserById(id); 
+      if (user === null) {
+        return createErrorResponse("Usuario no encontrado", null, 404)
+      }
+      return createSuccessResponse("Usuario encontrado", {
+        id: user.id,
+        email: user.email,
+        role: user.roleName,
+        permissionEdit: user.permissionEdit === 1,
+      }, 200)
+    }
+    catch (error) {
+      console.log(error)
+      return createErrorResponse("Error al obtener el perfil del usuario", error, 500)
+    }
   }
 }
 

@@ -41,3 +41,22 @@ export const register = async (req, res) => {
     });
   }
 }
+
+export const getProfile = async (req, res) => {
+  try {
+    const { success, message, data, status } = await authModel.getUserProfile(req.user.id);
+
+    res.status(status).json({
+      success: success,
+      message: message,
+      data: data,
+    });
+    
+  } catch (error) {
+    console.error("Get profile error:", error)
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    })
+  }
+}

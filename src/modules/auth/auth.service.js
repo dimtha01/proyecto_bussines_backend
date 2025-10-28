@@ -29,6 +29,22 @@ export const authService = {
       throw error;
     }
   },
+  getUserById: async (id) => {
+    try {
+      const [user] = await pool.query(`
+        SELECT u.*, r.name as roleName, r.permissionEdit, reg.nombre as regionName
+        FROM users u
+        JOIN roles r ON u.roleId = r.id
+        JOIN regiones reg ON reg.id = u.id_region
+        WHERE u.id = ?
+      `, [id]);
+      return user.length > 0 ? user[0] : null;
+    }
+    catch (error) {
+      console.error("Error al obtener el usuario por ID:", error);
+      throw error;
+    }
+  },
   createUser: async (email, password, role) => {
     try {
       const hashedPassword = await hashPassword(password);
