@@ -1,5 +1,5 @@
-import { pool } from "../../../db.js";
-import { createErrorResponse } from "../../../util/response.js";
+import { pool } from "../../db.js";
+import { createErrorResponse } from "../../util/response.js";
 
 export const clientService = {
   getClientes: async (region) => {

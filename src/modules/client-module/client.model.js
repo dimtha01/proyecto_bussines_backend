@@ -1,4 +1,4 @@
-import { createSuccessResponse } from "../../../util/response.js";
+import { createSuccessResponse } from "../../util/response.js";
 import { clientService } from "./client.service.js";
 
 export const clientModel = {

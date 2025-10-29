@@ -16,11 +16,11 @@ import procedimientoComercialRoutes from './routes/procedimiento_comercial.route
 import userRoutes from "./routes/user.routes.js"
 import roleRoutes from "./routes/role.routes.js"
 import archivosRoutes from "./routes/archivos.routes.js";
-import { clientRoutes } from "./modules/auth/client-module/index.js";
+import { clientRoutes } from "./modules/client-module/index.js";
 import youtubeRoutes from "./routes/youtube.routes.js";
 import path from 'path';
 import { fileURLToPath } from 'url';
-import  { authRoutesV2 }  from "./modules/auth/index.js";
+import { authRoutesV2 } from "./modules/auth/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,7 +36,7 @@ app.use('/uploads', express.static(uploadsPath));
 app.use(cors()); // Habilita CORS para todas las rutas
 app.use(morgan("dev"));
 app.use(express.json());
-  
+
 // Routes
 app.use("/", indexRoutes);
 app.use("/api", proyectsRoutes);
