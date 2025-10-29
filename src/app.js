@@ -7,7 +7,6 @@ import avanceFisicoRoutes from "./routes/avance_fisico.routes.js";
 import avanceFinancieroRoutes from "./routes/avance_financiero.routes.js";
 import indexRoutes from "./routes/index.routes.js";
 import regionesRoutes from './routes/regiones.routes.js'
-import estatusRoutes from './routes/estatus.routes.js'
 import dashboardRoutes from './routes/dashboard.routes.js'
 import costosRoutes from './routes/costos.routes.js'
 import proveedoresRoutes from './routes/proveedores.routes.js'
@@ -21,7 +20,7 @@ import archivosRoutes from "./routes/archivos.routes.js";
 import youtubeRoutes from "./routes/youtube.routes.js";
 import path from 'path';
 import { fileURLToPath } from 'url';
-
+import statusRoutes from "./modules/status-madule/status.routes.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -44,7 +43,6 @@ app.use("/api", proyectsRoutes);
 app.use("/api", avanceFisicoRoutes);
 app.use("/api", avanceFinancieroRoutes);
 app.use("/api", regionesRoutes);
-app.use("/api", estatusRoutes);
 app.use("/api", dashboardRoutes);
 app.use("/api", costosRoutes);
 app.use("/api", proveedoresRoutes);
@@ -58,6 +56,7 @@ app.use("/api/archivos", archivosRoutes);
 app.use("/api/youtube", youtubeRoutes);
 
 
+app.use("/api/v2/status", statusRoutes);
 // Middleware para manejar rutas no encontradas
 app.use((req, res, next) => {
   res.status(404).json({ message: "Not found" });
