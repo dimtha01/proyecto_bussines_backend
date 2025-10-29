@@ -19,6 +19,8 @@ import archivosRoutes from "./routes/archivos.routes.js";
 import youtubeRoutes from "./routes/youtube.routes.js";
 import path from 'path';
 import { fileURLToPath } from 'url';
+import statusRoutes from "./modules/status-madule/status.routes.js";
+import { authRoutes } from "./modules/auth/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,7 +54,9 @@ app.use("/api/roles", roleRoutes)
 app.use("/api/archivos", archivosRoutes);
 app.use("/api/youtube", youtubeRoutes);
 
-
+app.use("/api/v2/status", statusRoutes);
+app.use("/api/v2/auth", authRoutes)
+app.use("/api/v2/costos", costsRoutes)
 // Middleware para manejar rutas no encontradas
 app.use((req, res, next) => {
   res.status(404).json({ message: "Not found" });
