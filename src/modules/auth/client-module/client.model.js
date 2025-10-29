@@ -17,4 +17,11 @@ export const clientModel = {
     }
     return createSuccessResponse("Cliente creado correctamente", result, 200);
   },
+  updateCliente: async (id, cliente) => {
+    const result = await clientService.updateCliente(id, cliente);
+    if (result.length === 0) {
+      return createSuccessResponse("No se pudo actualizar el cliente", result, 500);
+    }
+    return createSuccessResponse("Cliente actualizado correctamente", result, 200);
+  },
 }
