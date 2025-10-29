@@ -17,6 +17,7 @@ import procedimientoComercialRoutes from './routes/procedimiento_comercial.route
 import userRoutes from "./routes/user.routes.js"
 import roleRoutes from "./routes/role.routes.js"
 import archivosRoutes from "./routes/archivos.routes.js";
+import { clientRoutes } from "./modules/auth/client-module/index.js";
 import youtubeRoutes from "./routes/youtube.routes.js";
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -57,7 +58,7 @@ app.use("/api/archivos", archivosRoutes);
 app.use("/api/youtube", youtubeRoutes);
 
 app.use("/api/v2/auth", authRoutesV2)
-
+app.use("/api/v2/clients", clientRoutes)
 
 // Middleware para manejar rutas no encontradas
 app.use((req, res, next) => {
