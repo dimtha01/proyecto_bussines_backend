@@ -28,3 +28,10 @@ export const createCostos = async (req, res) => {
   const result = await costsModel.createCostos(id_proyecto, fecha, costo, monto_sobrepasado, fecha_inicio, fecha_fin, numero_valuacion, amortizacion);
   return res.status(result.status).json(result);
 }
+
+export const updateCosto = async (req, res) => {
+  const { id } = req.params;
+  const { fecha, costo, monto_sobrepasado, fecha_inicio, fecha_fin, numero_valuacion, amortizacion } = req.body;
+  const result = await costsModel.updateCosto(id, fecha, costo, monto_sobrepasado, fecha_inicio, fecha_fin, numero_valuacion, amortizacion);
+  return res.status(result.status).json(result);
+};

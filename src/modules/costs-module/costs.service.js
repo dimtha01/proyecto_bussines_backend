@@ -87,5 +87,52 @@ export const costsService = {
       [id_proyecto, fecha, costo, monto_sobrepasado, fecha_inicio, fecha_fin, numero_valuacion, amortizacion]
     );
     return result;
+  },
+  getCostoById: async (id) => {
+    const [result] = await pool.query("SELECT * FROM costos_proyectos WHERE id = ?", [id]);
+    return result.length > 0 ? result[0] : null;
+  },
+  updateCosto: async (id, fecha, costo, monto_sobrepasado, fecha_inicio, fecha_fin, numero_valuacion, amortizacion) => {
+
+    let query = "UPDATE costos_proyectos SET ";
+    const updates = [];
+    const values = [];
+
+    if (fecha) {
+      updates.push("fecha = ?");
+      values.push(fecha);
+    }
+    if (costo !== undefined) {
+      updates.push("costo = ?");
+      values.push(parseFloat(costo));
+    }
+    if (monto_sobrepasado !== undefined) {
+      updates.push("monto_sobrepasado = ?");
+      values.push(parseFloat(monto_sobrepasado));
+    }
+    if (fecha_inicio) {
+      updates.push("fecha_inicio = ?");
+      values.push(fecha_inicio);
+    }
+    if (fecha_fin) {
+      updates.push("fecha_fin = ?");
+      values.push(fecha_fin);
+    }
+    if (numero_valuacion !== undefined) {
+      updates.push("numero_valuacion = ?");
+      values.push(numero_valuacion);
+    }
+    if (amortizacion !== undefined) {
+      updates.push("amortizacion = ?");
+      values.push(parseFloat(amortizacion));
+    }
+    values.push(id);
+
+    query += updates.join(", ") + " WHERE id = ?";
+
+    await pool.query(query, values);
+
+    const [result] = await pool.query(query, values);
+    return result;
   }
 };

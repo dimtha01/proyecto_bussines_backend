@@ -67,5 +67,23 @@ export const costsModel = {
         status: 500,
       });
     }
+  },
+  updateCosto: async (id, fecha, costo, monto_sobrepasado, fecha_inicio, fecha_fin, numero_valuacion, amortizacion) => {
+    try {
+      const result = await costsService.updateCosto(id, fecha, costo, monto_sobrepasado, fecha_inicio, fecha_fin, numero_valuacion, amortizacion);
+      if (result.affectedRows === 0) {
+        return createErrorResponse({
+          message: "No se pudo actualizar el costo.",
+          status: 500,
+        });
+      }
+      return createSuccessResponse("Costo actualizado correctamente.", result.affectedRows, 200);
+    } catch (error) {
+      console.log(error);
+      return createErrorResponse({
+        message: "Error al actualizar el costo.",
+        status: 500,
+      });
+    }
   }
 }
