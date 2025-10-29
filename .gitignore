@@ -5,3 +5,5 @@ coverage
 .docs
 temp_videos/
 uploads/
+config/token.json
+config/credentials.json
