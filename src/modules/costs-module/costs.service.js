@@ -70,4 +70,11 @@ export const costsService = {
     );
     return CostoOrdenesCompra[0]?.Costo_ordenes_Compra || 0;
   },
+  updateCostoEstatus: async (id, id_estatus) => {
+    const [result] = await pool.query(
+      "UPDATE costos_proyectos SET id_estatus = ? WHERE id = ?",
+      [id_estatus, id]
+    );
+    return result;
+  }
 }

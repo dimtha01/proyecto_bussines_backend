@@ -1,9 +1,11 @@
 import { Router } from "express";
-import { getAllCostosByProyecto } from "./costs.controller.js";
-import { validateCostsIsById } from "./costs.validators.js";
+import { getAllCostosByProyecto, updateCostoEstatus } from "./costs.controller.js";
+import { validateCostsIsById, validateCostsIsEstatus } from "./costs.validators.js";
 
-const router = Router();
 
-router.get("/:id", validateCostsIsById, getAllCostosByProyecto);
+export const costsRoutes = Router();
 
-export default router;
+costsRoutes.get("/:id", validateCostsIsById, getAllCostosByProyecto);
+costsRoutes.put("/:id/estatus", validateCostsIsById, validateCostsIsEstatus, updateCostoEstatus);
+
+export default costsRoutes;
