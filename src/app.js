@@ -8,19 +8,18 @@ import avanceFinancieroRoutes from "./routes/avance_financiero.routes.js";
 import indexRoutes from "./routes/index.routes.js";
 import regionesRoutes from './routes/regiones.routes.js'
 import dashboardRoutes from './routes/dashboard.routes.js'
-import costosRoutes from './routes/costos.routes.js'
+import { costsRoutes } from "./modules/costs-module/index.js";
 import proveedoresRoutes from './routes/proveedores.routes.js'
 import requisitionRoutes from './routes/requisition.routes.js'
 import estatusComercialRoutes from './routes/estatus_comercial.routes.js'
 import procedimientoComercialRoutes from './routes/procedimiento_comercial.routes.js'
-import authRoutes from "./routes/auth.routes.js"
 import userRoutes from "./routes/user.routes.js"
 import roleRoutes from "./routes/role.routes.js"
 import archivosRoutes from "./routes/archivos.routes.js";
 import youtubeRoutes from "./routes/youtube.routes.js";
 import path from 'path';
 import { fileURLToPath } from 'url';
-import statusRoutes from "./modules/status-madule/status.routes.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -35,7 +34,7 @@ app.use('/uploads', express.static(uploadsPath));
 app.use(cors()); // Habilita CORS para todas las rutas
 app.use(morgan("dev"));
 app.use(express.json());
-  
+
 // Routes
 app.use("/", indexRoutes);
 app.use("/api", employeesRoutes);
@@ -44,19 +43,16 @@ app.use("/api", avanceFisicoRoutes);
 app.use("/api", avanceFinancieroRoutes);
 app.use("/api", regionesRoutes);
 app.use("/api", dashboardRoutes);
-app.use("/api", costosRoutes);
 app.use("/api", proveedoresRoutes);
 app.use("/api", requisitionRoutes);
 app.use("/api", estatusComercialRoutes);
 app.use("/api", procedimientoComercialRoutes);
-app.use("/api/auth", authRoutes)
 app.use("/api/users", userRoutes)
 app.use("/api/roles", roleRoutes)
 app.use("/api/archivos", archivosRoutes);
 app.use("/api/youtube", youtubeRoutes);
 
 
-app.use("/api/v2/status", statusRoutes);
 // Middleware para manejar rutas no encontradas
 app.use((req, res, next) => {
   res.status(404).json({ message: "Not found" });
