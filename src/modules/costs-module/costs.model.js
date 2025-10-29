@@ -55,5 +55,17 @@ export const costsModel = {
         status: 500,
       });
     }
+  },
+  createCostos: async (id_proyecto, fecha, costo, monto_sobrepasado, fecha_inicio, fecha_fin, numero_valuacion, amortizacion) => {
+    try {
+      const result = await costsService.createCostos(id_proyecto, fecha, costo, monto_sobrepasado, fecha_inicio, fecha_fin, numero_valuacion, amortizacion);
+      return createSuccessResponse("Costo agregado correctamente.", result.insertId, 201);
+    } catch (error) {
+      console.log(error);
+      return createErrorResponse({
+        message: "Error al agregar el costo.",
+        status: 500,
+      });
+    }
   }
 }

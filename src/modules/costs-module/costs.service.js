@@ -76,5 +76,16 @@ export const costsService = {
       [id_estatus, id]
     );
     return result;
+  },
+  getProjectById: async (id) => {
+    const [projectResult] = await pool.query("SELECT * FROM proyectos WHERE id = ?", [id]);
+    return projectResult;
+  },
+  createCostos: async (id_proyecto, fecha, costo, monto_sobrepasado, fecha_inicio, fecha_fin, numero_valuacion, amortizacion) => {
+    const [result] = await pool.query(
+      "INSERT INTO costos_proyectos (id_proyecto, fecha, costo, monto_sobrepasado, fecha_inicio, fecha_fin, numero_valuacion, amortizacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      [id_proyecto, fecha, costo, monto_sobrepasado, fecha_inicio, fecha_fin, numero_valuacion, amortizacion]
+    );
+    return result;
   }
-}
+};

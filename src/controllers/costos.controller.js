@@ -1,69 +1,6 @@
 import { pool } from "../db.js";
 
 
-export const updateCostoEstatus = async (req, res) => {
-  try {
-    // Extraer el ID del costo y el nuevo estatus de los parámetros
-    const { id } = req.params; // ID del costo
-    const { id_estatus } = req.body; // Nuevo estatus
-
-    // Validar que el ID sea un número válido
-    if (!id || isNaN(parseInt(id))) {
-      return res.status(400).json({
-        message: "El ID del costo es obligatorio y debe ser un número válido.",
-      });
-    }
-
-    // Validar que el campo id_estatus esté presente
-    if (id_estatus === undefined || isNaN(parseInt(id_estatus))) {
-      return res.status(400).json({
-        message: "El campo id_estatus es obligatorio y debe ser un número válido.",
-      });
-    }
-
-    // Consultar si existe el registro del costo
-    const [costoResult] = await pool.query(
-      "SELECT id FROM costos_proyectos WHERE id = ?",
-      [id]
-    );
-
-    // Si no existe el costo, devolver un error
-    if (costoResult.length === 0) {
-      return res.status(404).json({
-        message: "No se encontró ningún costo con el ID proporcionado.",
-      });
-    }
-
-    // Actualizar el estatus del costo
-    const query = `
-      UPDATE costos_proyectos 
-      SET id_estatus = ? 
-      WHERE id = ?
-    `;
-
-    const [result] = await pool.query(query, [id_estatus, id]);
-
-    // Verificar si se actualizó algún registro
-    if (result.affectedRows === 0) {
-      return res.status(404).json({
-        message: "No se pudo actualizar el estatus del costo.",
-      });
-    }
-
-    // Devolver una respuesta exitosa
-    res.status(200).json({
-      message: "Estatus del costo actualizado exitosamente.",
-      id,
-      id_estatus,
-    });
-  } catch (error) {
-    console.error("Error al actualizar el estatus del costo:", error);
-    res.status(500).json({
-      message: "Ocurrió un error al procesar la solicitud.",
-    });
-  }
-};
-
 export const createCostos = async (req, res) => {
   try {
     // Extraer los datos del cuerpo de la solicitud (incluyendo amortización)
