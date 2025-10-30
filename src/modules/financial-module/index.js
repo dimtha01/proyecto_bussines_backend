@@ -1,0 +1,1 @@
+export {default as financialRoutes} from "./financial.routes.js"

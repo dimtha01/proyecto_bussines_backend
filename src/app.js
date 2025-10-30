@@ -21,6 +21,7 @@ import { fileURLToPath } from 'url';
 import statusRoutes from "./modules/status-madule/status.routes.js";
 import { authRoutes } from "./modules/auth/index.js";
 import {regionsRoutes} from "./modules/regions-module/index.js";
+import { financialRoutes } from "./modules/financial-module/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,6 +58,7 @@ app.use("/api/v2/auth", authRoutes)
 app.use("/api/v2/costos", costsRoutes)
 app.use("/api/v2/clients", clientRoutes)
 app.use("/api/v2/regions", regionsRoutes)
+app.use("/api/v2/financial", financialRoutes)
 // Middleware para manejar rutas no encontradas
 app.use((req, res, next) => {
   res.status(404).json({ message: "Not found" });
