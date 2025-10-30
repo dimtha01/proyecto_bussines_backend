@@ -1,1 +1,1 @@
-export { default as regionsRoutes } from "./regions.routes.js";
+export { default as regionsRoutes  } from "./regions.route.js";

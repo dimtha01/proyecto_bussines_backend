@@ -1,22 +1,22 @@
-import { ServiceRegionGetGlobal } from "./regions.service.js"
-import { ServiceRegionGetDetails } from "./regions.service.js"
+import { createErrorResponse, createSuccessResponse } from "../../util/response.js";
+import { regionsService } from "./regions.service.js";
 
 export const RegionModel = {
     getRegions: async () => {
-        const { result: { costo_planificado_total = 0, costo_real_total = 0 }, error } = await ServiceRegionGetGlobal.getConsolidatedProjects();
+        const { costo_planificado_total = 0, costo_real_total = 0 , error } = await regionsService.getConsolidatedProjects();
         if (error) {
-            return createErr{ result: null, error }
+            return createErrorResponse("Error al obtener los proyectos consolidados", error.message,500)
         }
 
-        const { regions, error: errorRegions } = await ServiceRegionGetDetails.getAllRegions();
+        const { regions, error: errorRegions } = await regionsService.getAllRegions();
 
         if (errorRegions) {
-            return { result: null, error: errorRegions }
+            return createErrorResponse("Error al obtener los proyectos consolidados", errorRegions.message,500)
         }
-        return {
+        return createSuccessResponse("Regiones y sus consolidados obtenidos exitosamente", {
             costo_planificado_total: Number.parseFloat(costo_planificado_total || 0),
             costo_real_total: Number.parseFloat(costo_real_total || 0),
             regiones: regions, // Detalles por región
-        }
+        },200)
     }
 }

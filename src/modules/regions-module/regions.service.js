@@ -1,6 +1,6 @@
 import { pool } from "../../db.js";
 
-const regionsService = {
+export const regionsService = {
   getConsolidatedProjects: async () => {
     try {
     const [result] = await pool.query(
@@ -22,9 +22,10 @@ const regionsService = {
           ) cp_totals ON p.id = cp_totals.id_proyecto
       `
     )
-    return {result , error:null}
+    const {costo_planificado_total = 0, costo_real_total = 0} = result[0]
+    return {costo_planificado_total, costo_real_total , error:null}
     } catch (error) {
-      return {result:null , error}
+      return {costo_planificado_total: null, costo_real_total: null , error}
     }
   },
   getAllRegions: async () => {

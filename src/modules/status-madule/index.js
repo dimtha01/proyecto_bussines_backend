@@ -1,0 +1,1 @@
+export { default as statusRoutes } from "./status.routes.js";
