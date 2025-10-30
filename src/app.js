@@ -21,7 +21,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import statusRoutes from "./modules/status-madule/status.routes.js";
 import { authRoutes } from "./modules/auth/index.js";
-import { physicalRoutes } from "./modules/physical-module/index.js";
+import { physicalRoutes } from "./modules/progress/physical-module/index.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
