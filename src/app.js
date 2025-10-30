@@ -6,7 +6,7 @@ import proyectsRoutes from "./routes/proyects.routes.js";
 import avanceFisicoRoutes from "./routes/avance_fisico.routes.js";
 import avanceFinancieroRoutes from "./routes/avance_financiero.routes.js";
 import indexRoutes from "./routes/index.routes.js";
-import regionesRoutes from './routes/regiones.routes.js'
+import regionesRoutes from './modules/regions-module/regions.route.js'
 import estatusRoutes from './routes/estatus.routes.js'
 import dashboardRoutes from './routes/dashboard.routes.js'
 import costosRoutes from './routes/costos.routes.js'
