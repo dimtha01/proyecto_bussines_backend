@@ -1,7 +1,7 @@
 import { Router } from "express";
+import { createPhysical } from "./physical.controller.js";
+import { ValidatePhysicalCreate } from "./physical.validators.js";
 
 const router = Router();
-router.get("/", (req, res) => {
-    res.send("hola mundo");
-});
+router.post("/", ValidatePhysicalCreate, createPhysical);
 export default router;
