@@ -1,6 +1,6 @@
 import { Router } from "express";
-
+import { getProyects } from "./proyect.controller.js";
 const router = Router();
 
-router.get("/", (req, res) => { res.send("proyects Api") });
+router.get("/", getProyects);
 export default router;
