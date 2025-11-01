@@ -1,0 +1,1 @@
+export { default as proyectRoutes } from "./proyect.routes.js";
