@@ -1,8 +1,13 @@
 import Router from "express";
-import { financialValidator } from "./financial.validator.js";
-import { createAvanceFinanciero } from "./financial.controller.js";
+import { financialValidator, updateAvanceFinancieroValidator } from "./financial.validator.js";
+import { createAvanceFinanciero, updateAvanceFinanciero, getAvanceFinanciero, getAvanceFinancieroByProyectoId } from "./financial.controller.js";
 const router = Router();
 
-router.post("", financialValidator, createAvanceFinanciero);
+router.get("/", getAvanceFinanciero);
+router.get("/:id" ,getAvanceFinancieroByProyectoId);
+router.post("/", financialValidator, createAvanceFinanciero);
+router.put("/:id", updateAvanceFinancieroValidator, updateAvanceFinanciero);
+// router.put("", financialValidator, updateEstatusAvanceFinanciero);
+// router.put("", financialValidator, updateMontoAvanceFinanciero);
 
 export default router;
