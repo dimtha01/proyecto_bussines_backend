@@ -1,5 +1,5 @@
 import { log } from "console";
-import { createSuccessResponse } from "../../util/response.js";
+import { createSuccessResponse } from "../../../util/response.js";
 import { financialModel } from "./financial.model.js";
 
 export const getAvanceFinanciero = async (req, res) => {
