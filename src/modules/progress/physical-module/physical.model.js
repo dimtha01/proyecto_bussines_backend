@@ -1,4 +1,4 @@
-import { createSuccessResponse } from "../../util/response.js"
+import { createSuccessResponse } from "../../../util/response.js"
 import { physicalService } from "./physical.service.js"
 
 export const physicalModel ={

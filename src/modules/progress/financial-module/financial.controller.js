@@ -1,4 +1,3 @@
-import { log } from "console";
 import { createSuccessResponse } from "../../../util/response.js";
 import { financialModel } from "./financial.model.js";
 
