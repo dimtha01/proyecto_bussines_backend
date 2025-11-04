@@ -1,12 +1,12 @@
-// export const financialValidatorById = (req, res, next) => {
-//     const { id_proyecto } = req.params;
+export const financialValidatorById = (req, res, next) => {
+    const { id_proyecto } = req.params;
 
-//     if (!id_proyecto) {
-//         return res.status(400).json({ message: "No se encontro el avance financiero" });
-//     }
+    if (!id_proyecto ) {
+        return res.status(400).json({ message: "No se encontro el avance financiero" });
+    }
 
-//     next();
-// }
+    next();
+}
 
 export const financialValidator = (req, res, next) => {
     const {

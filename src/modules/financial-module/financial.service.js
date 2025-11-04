@@ -60,7 +60,7 @@ export const financialService = {
             throw error;
         }
     },
-    createAdvanceFinancial: async () => {
+    createAdvanceFinancial: async (id_proyecto, fecha, numero_valuacion, monto_usd, numero_factura, id_estatus_proceso, fecha_inicio, fecha_fin,) => {
         try {
             const [result] = await pool.query(
                 `
@@ -88,55 +88,61 @@ export const financialService = {
             );
             return result;
         } catch (error) {
-            throw error;
+            console.error(error);
+            return createErrorResponse("Error al crear el avance financiero", error.message, 500);
         }
     },
     // Update financial advance
-    updateAvanceFinanciero: async (id, id_proyecto, fecha, numero_valuacion, monto_usd, numero_factura, id_estatus_proceso, fecha_inicio, fecha_fin) => {
+    updateAvanceFinanciero: async (id, data) => {
         try {
-            const updates = [];
+            const { id_proyecto, fecha, numero_valuacion, monto_usd, numero_factura, id_estatus_proceso, fecha_inicio, fecha_fin } = data;
+            console.log("Data to update:", id_proyecto, fecha, numero_valuacion, monto_usd, numero_factura, id_estatus_proceso, fecha_inicio, fecha_fin);
+            const fields = [];
             const values = [];
 
-            if (id_proyecto !== undefined) {
-                updates.push("id_proyecto = ?");
+            if (id_proyecto !== undefined && id_proyecto !== null) {
+                fields.push("id_proyecto = ?");
                 values.push(id_proyecto);
             }
-            if (fecha !== undefined) {
-                updates.push("fecha = ?");
+            if (fecha !== undefined && fecha !== null) {
+                fields.push("fecha = ?");
                 values.push(fecha);
             }
-            if (numero_valuacion !== undefined) {
-                updates.push("numero_valuacion = ?");
+            if (numero_valuacion !== undefined && numero_valuacion !== null) {
+                fields.push("numero_valuacion = ?");
                 values.push(numero_valuacion);
             }
-            if (monto_usd !== undefined) {
-                updates.push("monto_usd = ?");
+            if (monto_usd !== undefined && monto_usd !== null) {
+                fields.push("monto_usd = ?");
                 values.push(monto_usd);
             }
             if (numero_factura !== undefined) {
-                updates.push("numero_factura = ?");
-                values.push(numero_factura || null);
+                fields.push("numero_factura = ?");
+                values.push(numero_factura);
             }
-            if (id_estatus_proceso !== undefined) {
-                updates.push("id_estatus_proceso = ?");
+            if (id_estatus_proceso !== undefined && id_estatus_proceso !== null) {
+                fields.push("id_estatus_proceso = ?");
                 values.push(id_estatus_proceso);
             }
-            if (fecha_inicio !== undefined) {
-                updates.push("fecha_inicio = ?");
+            if (fecha_inicio !== undefined && fecha_inicio !== null) {
+                fields.push("fecha_inicio = ?");
                 values.push(fecha_inicio);
             }
-            if (fecha_fin !== undefined) {
-                updates.push("fecha_fin = ?");
+            if (fecha_fin !== undefined && fecha_fin !== null) {
+                fields.push("fecha_fin = ?");
                 values.push(fecha_fin);
+            }
+
+            if (fields.length === 0) {
+                throw new Error("No hay campos para actualizar");
             }
 
             values.push(id);
 
-            const query = `
-        UPDATE avance_financiero
-        SET ${updates.join(", ")}
-        WHERE id = ?
-      `;
+            const query = `UPDATE avance_financiero SET ${fields.join(", ")} WHERE id = ?`;
+
+            console.log("Query:", query);
+            console.log("Values:", values);
 
             const [result] = await pool.query(query, values);
             return result;
@@ -146,8 +152,9 @@ export const financialService = {
     },
 
     // Update status
-    updateEstatus: async (id, id_estatus_proceso, numero_factura, fecha_inicio, fecha_fin) => {
+    updateEstatus: async (id, data) => {
         try {
+            const { id_estatus_proceso, numero_factura, fecha_inicio, fecha_fin } = data;
             let query = "UPDATE avance_financiero SET id_estatus_proceso = ?";
             const queryParams = [id_estatus_proceso];
 
@@ -170,6 +177,22 @@ export const financialService = {
             queryParams.push(id);
 
             const [result] = await pool.query(query, queryParams);
+            return result;
+        } catch (error) {
+            throw error;
+        }
+    },
+    // Update monto
+    updateMonto: async (id, monto_usd) => {
+        try {
+            const [result] = await pool.query(
+                `
+      UPDATE avance_financiero
+      SET monto_usd = ?
+      WHERE id = ?
+    `,
+                [monto_usd, id]
+            );
             return result;
         } catch (error) {
             throw error;

@@ -1,3 +1,4 @@
+import { log } from "console";
 import { createSuccessResponse } from "../../util/response.js";
 import { financialModel } from "./financial.model.js";
 
@@ -7,14 +8,14 @@ export const getAvanceFinanciero = async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error("Error al obtener el avance financiero:", error);
-    
+
     if (error.message === "No se encontraron registros de avance financiero") {
       return res.status(404).json({ createSuccessResponse });
     }
-    
-    return res.status(500).json({ 
-      message: "Algo salió mal", 
-      error: error.message 
+
+    return res.status(500).json({
+      message: "Algo salió mal",
+      error: error.message
     });
   }
 };
@@ -22,14 +23,14 @@ export const getAvanceFinanciero = async (req, res) => {
 // Get financial advances by project ID
 export const getAvanceFinancieroByProyectoId = async (req, res) => {
   try {
-    const { id } = req.params;
-    const result = await financialModel.getByProyectoId(id);
-    res.json(result);
+    const { id_proyecto } = req.params;
+    const result = await financialModel.getByProyectoId(id_proyecto);
+    return res.json(result);
   } catch (error) {
     console.error("Error al obtener el avance financiero:", error);
-    return res.status(500).json({ 
-      message: "Algo salió mal", 
-      error: error.message 
+    return res.status(500).json({
+      message: "Algo salió mal",
+      error: error.message
     });
   }
 };
@@ -48,8 +49,7 @@ export const createAvanceFinanciero = async (req, res) => {
     } = req.body;
 
     const result = await financialModel.createAdvaced(id_proyecto, fecha, numero_valuacion, monto_usd, numero_factura, id_estatus_proceso, fecha_inicio, fecha_fin);
-    console.log(result);
-    
+
     return res.status(201).json(result);
   } catch (error) {
     console.error(error);
@@ -61,72 +61,28 @@ export const createAvanceFinanciero = async (req, res) => {
 export const updateAvanceFinanciero = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      id_proyecto,
-      fecha,
-      numero_valuacion,
-      monto_usd,
-      numero_factura,
-      id_estatus_proceso,
-      fecha_inicio,
-      fecha_fin,
-    } = req.body;
 
-    await financialModel.updateAvanceFinanciero(
-      id,
-      id_proyecto,
-      fecha,
-      numero_valuacion,
-      monto_usd,
-      numero_factura,
-      id_estatus_proceso,
-      fecha_inicio,
-      fecha_fin
-    );
+    const result = await financialModel.updateAvanceFinanciero(id,req.body);
 
     res.status(200).json({
       message: `El registro de avance financiero con ID ${id} ha sido actualizado correctamente`,
-      data: {
-        id,
-        id_proyecto,
-        fecha,
-        numero_valuacion,
-        monto_usd,
-        numero_factura,
-        id_estatus_proceso,
-        fecha_inicio,
-        fecha_fin,
-      },
+      data: result,
     });
   } catch (error) {
     console.error("Error al actualizar el avance financiero:", error);
-    
-    if (error.message === "El registro de avance financiero no existe") {
-      return res.status(404).json({ message: error.message });
-    }
-    
-    if (error.message === "No se pudo actualizar el registro") {
-      return res.status(500).json({ message: error.message });
-    }
-    
-    return res.status(500).json({ 
-      message: "Ocurrió un error al intentar actualizar el registro." 
-    });
+    res.status(500).json({ message: error.message });
   }
 };
+
 
 // Update status
 export const updateEstatusAvanceFinanciero = async (req, res) => {
   try {
     const { id } = req.params;
-    const { id_estatus_proceso, numero_factura, fecha_inicio, fecha_fin } = req.body;
-
+    
     await financialModel.updateEstatus(
       id,
-      id_estatus_proceso,
-      numero_factura,
-      fecha_inicio,
-      fecha_fin
+      req.body
     );
 
     res.status(200).json({
@@ -139,14 +95,14 @@ export const updateEstatusAvanceFinanciero = async (req, res) => {
     });
   } catch (error) {
     console.error("Error al actualizar el estado del avance financiero:", error);
-    
+
     if (error.message === "No se encontró el avance financiero con el ID proporcionado") {
       return res.status(404).json({ message: error.message });
     }
-    
-    return res.status(500).json({ 
-      message: "Algo salió mal", 
-      error: error.message 
+
+    return res.status(500).json({
+      message: "Algo salió mal",
+      error: error.message
     });
   }
 };
@@ -168,18 +124,18 @@ export const updateMontoAvanceFinanciero = async (req, res) => {
     });
   } catch (error) {
     console.error("Error al actualizar el monto del avance financiero:", error);
-    
+
     if (error.message === "El registro de avance financiero no existe") {
       return res.status(404).json({ message: error.message });
     }
-    
+
     if (error.message === "No se pudo actualizar el registro") {
       return res.status(500).json({ message: error.message });
     }
-    
-    return res.status(500).json({ 
-      message: "Algo salió mal", 
-      error: error.message 
+
+    return res.status(500).json({
+      message: "Algo salió mal",
+      error: error.message
     });
   }
 };
