@@ -1,0 +1,1 @@
+export {default as physicalRoutes} from "./physical.routes.js";
