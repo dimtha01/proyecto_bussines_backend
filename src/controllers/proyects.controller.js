@@ -1,3 +1,4 @@
+import { log } from "console";
 import { pool } from "../db.js";
 
 export const getProyectsAll = async (req, res) => {
@@ -190,6 +191,7 @@ export const getProyectsAll = async (req, res) => {
     return res.status(500).json({ message: "Algo salió mal" });
   }
 };
+
 export const getProyectsAllRequisition = async (req, res) => {
   try {
     let query = `
@@ -248,7 +250,8 @@ export const getProyectsAllRequisition = async (req, res) => {
                   WHERE req.id_proyecto = p.id), 0) AS monto_anticipo_total,
         -- Máximo avance real y planificado
         MAX(af_fisico.avance_real) AS avance_real_maximo,
-        MAX(af_fisico.avance_planificado) AS avance_planificado_maximo
+        MAX(af_fisico.avance_planificado) AS avance_planificado_maximo,
+        MAX(af_fisico.fecha_fin) AS ultima_fecha_fin_avance_fisico,
       FROM
         proyectos p
         LEFT JOIN clientes c ON p.id_cliente = c.id
@@ -594,6 +597,7 @@ export const getProyectsNameRegion = async (req, res) => {
     return res.status(500).json({ message: "Algo salió mal" });
   }
 };
+
 export const getProyectoById = async (req, res) => {
   try {
     const params = req.params;
@@ -675,6 +679,7 @@ export const getProyectoById = async (req, res) => {
     return res.status(500).json({ message: "Algo salió mal" });
   }
 };
+
 export const postProyect = async (req, res) => {
   try {
     const {
@@ -697,6 +702,8 @@ export const postProyect = async (req, res) => {
       idEstatusComercial, // Campo agregado (opcional)
       codigoContratoCliente, // Campo agregado: Código del contrato del cliente
     } = req.body;
+
+    console.log(req.body);
 
     // Validación básica de campos obligatorios
     if (!numero || !nombre || !nombreCorto || !idCliente || !idRegion) {
@@ -796,6 +803,7 @@ export const postProyect = async (req, res) => {
     return res.status(500).json({ message: "Error al crear el proyecto" });
   }
 };
+
 export const putProyect = async (req, res) => {
   try {
     const { id } = req.params; // ID del proyecto a actualizar
@@ -923,6 +931,7 @@ export const putProyect = async (req, res) => {
     return res.status(500).json({ message: "Error al actualizar el proyecto" });
   }
 };
+
 export const deleteProyect = async (req, res) => {
   try {
     const { id } = req.params; // Obtener el ID del proyecto a eliminar del parámetro de URL
