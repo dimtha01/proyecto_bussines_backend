@@ -154,7 +154,7 @@ export const downloadFile = async (req, res) => {
         const file = files[0];
         const currentFilePath = file.ruta_archivo;
 
-        const fullPath = path.join(__dirname, '..', currentFilePath);
+        const fullPath = path.join(__dirname, '../../', currentFilePath);
         console.log(fullPath);
 
         // Verificar si el archivo existe
