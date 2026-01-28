@@ -1,228 +1,216 @@
+// controllers/archivos.controller.js
 import { pool } from "../db.js";
 import { detectFileType } from "../middleware/multer.middleware.js";
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import fs from "fs/promises";
+import path from "path";
 
-// Controlador para subir archivos a un proyecto específico
+// =====================================================
+// CONFIG: Root absoluto de uploads (portable local/prod)
+// =====================================================
+const UPLOADS_ROOT = process.env.UPLOADS_ROOT
+  ? path.resolve(process.env.UPLOADS_ROOT)
+  : path.resolve(process.cwd(), "uploads"); // uploads/ en la raíz del proyecto [web:136]
+
+// Convierte "uploads/pdf/x.pdf" o "/uploads/pdf/x.pdf" -> "pdf/x.pdf"
+const toUploadsRelative = (rutaArchivo) => {
+  const p = String(rutaArchivo || "").replace(/\\/g, "/").replace(/^\//, "");
+  return p.startsWith("uploads/") ? p.slice("uploads/".length) : p;
+};
+
+// Construye el path absoluto real dentro de UPLOADS_ROOT y valida que no se salga
+const resolveSafeUploadPath = (rutaArchivo) => {
+  const rel = toUploadsRelative(rutaArchivo);
+  const abs = path.resolve(UPLOADS_ROOT, rel);
+  // Evita traversal: abs debe quedar dentro de UPLOADS_ROOT [web:144]
+  if (!abs.startsWith(UPLOADS_ROOT + path.sep) && abs !== UPLOADS_ROOT) {
+    throw new Error("Ruta inválida (path traversal)");
+  }
+  return abs;
+};
+
+// =====================================================
+// SUBIR ARCHIVOS
+// =====================================================
 export const uploadProjectFiles = async (req, res) => {
-    try {
-        // Obtener el ID del proyecto desde el request
-        const { projectId } = req.params;
+  try {
+    const { projectId } = req.params;
+    const files = req.files ?? [];
 
-        // Obtener los archivos subidos
-        const files = req.files ?? [];
-
-
-        // Validar que al menos un archivo se haya subido
-        if (!files.length) {
-            return res.status(400).json({ message: 'Debes subir al menos un archivo' });
-        }
-
-        // Validar que el proyecto exista
-        const [projectExists] = await pool.query(
-            'SELECT id FROM proyectos WHERE id = ?',
-            [projectId]
-        );
-
-        if (projectExists.length === 0) {
-            return res.status(404).json({ message: 'Proyecto no encontrado' });
-        }
-
-        // Construir los valores para la base de datos
-        const values = files.map(file => [
-            projectId,                         // id_proyecto
-            file.originalname,                 // nombre_archivo
-            file.relativePath,                         // ruta_archivo 
-            detectFileType(file.mimetype),     // tipo_archivo
-        ]);
-
-        // Insertar múltiples archivos en la tabla archivos
-        const [result] = await pool.query(
-            `INSERT INTO archivos 
-            (id_proyecto, nombre_archivo, ruta_archivo, tipo_archivo) 
-            VALUES ?`,
-            [values]
-        );
-
-        // Respuesta exitosa
-        res.status(201).json({
-            message: `${result.affectedRows} archivo(s) guardados correctamente.`,
-            files: values.map(v => ({
-                nombre: v[1],
-                tipo: v[3]
-            }))
-        });
-
-    } catch (error) {
-        console.error('Error al subir archivos:', error);
-        res.status(500).json({ message: 'Error interno al subir archivos' });
+    if (!files.length) {
+      return res.status(400).json({ message: "Debes subir al menos un archivo" });
     }
+
+    const [projectExists] = await pool.query("SELECT id FROM proyectos WHERE id = ?", [projectId]);
+    if (projectExists.length === 0) {
+      return res.status(404).json({ message: "Proyecto no encontrado" });
+    }
+
+    // Guardar SIEMPRE ruta relativa (recomendado: "uploads/...")
+    // Asumo que file.relativePath viene como "uploads/xxx/yyy.ext".
+    const values = files.map((file) => {
+      const relativePath = String(file.relativePath || "").replace(/\\/g, "/").replace(/^\//, "");
+      if (!relativePath) {
+        throw new Error("El middleware de multer no está asignando file.relativePath");
+      }
+
+      return [
+        projectId,                     // id_proyecto
+        file.originalname,             // nombre_archivo
+        relativePath,                  // ruta_archivo (RELATIVA)
+        detectFileType(file.mimetype), // tipo_archivo
+      ];
+    });
+
+    const [result] = await pool.query(
+      `INSERT INTO archivos (id_proyecto, nombre_archivo, ruta_archivo, tipo_archivo) VALUES ?`,
+      [values]
+    );
+
+    return res.status(201).json({
+      message: `${result.affectedRows} archivo(s) guardados correctamente.`,
+      files: values.map((v) => ({ nombre: v[1], tipo: v[3] })),
+    });
+  } catch (error) {
+    console.error("Error al subir archivos:", error);
+    return res.status(500).json({ message: "Error interno al subir archivos" });
+  }
 };
 
-// Controlador para listar archivos de un proyecto
+// =====================================================
+// LISTAR ARCHIVOS DE UN PROYECTO
+// =====================================================
 export const getProjectFiles = async (req, res) => {
-    try {
-        const { projectId } = req.params;
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
+  try {
+    const { projectId } = req.params;
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
 
-        // Validar que el proyecto exista
-        const [projectExists] = await pool.query(
-            'SELECT id FROM proyectos WHERE id = ?',
-            [projectId]
-        );
-
-        if (projectExists.length === 0) {
-            return res.status(404).json({ message: 'Proyecto no encontrado' });
-        }
-
-        // Obtener todos los archivos del proyecto
-        const [files] = await pool.query(
-            `SELECT 
-                id, 
-                nombre_archivo, 
-                ruta_archivo, 
-                tipo_archivo, 
-                fecha_creacion 
-            FROM archivos 
-            WHERE id_proyecto = ?
-            ORDER BY fecha_creacion DESC`,
-            [projectId]
-        );
-
-        // Función para verificar si es una URL externa (YouTube, HTTP, HTTPS)
-        const isExternalUrl = (url) => {
-            if (!url) return false;
-            
-            // Verificar si comienza con http:// o https://
-            return url.startsWith('http://') || url.startsWith('https://');
-        };
-
-        // Mapear archivos para incluir URL de descarga
-        const mappedFiles = files.map(file => {
-            const isExternal = isExternalUrl(file.ruta_archivo);
-            
-            return {
-                id: file.id,
-                nombre: file.nombre_archivo,
-                tipo: file.tipo_archivo,
-                fechaCreacion: file.fecha_creacion,
-                urlDescarga:`/api/archivos/descargar/${file.id}`,
-                ruta_archivo: isExternal 
-                    ? file.ruta_archivo // URL completa de YouTube
-                    : `${baseUrl}/${file.ruta_archivo}` // URL local con base
-            };
-        });
-
-        res.status(200).json({
-            total: mappedFiles.length,
-            archivos: mappedFiles
-        });
-
-    } catch (error) {
-        console.error('Error al obtener archivos:', error);
-        res.status(500).json({ message: 'Error interno al obtener archivos' });
+    const [projectExists] = await pool.query("SELECT id FROM proyectos WHERE id = ?", [projectId]);
+    if (projectExists.length === 0) {
+      return res.status(404).json({ message: "Proyecto no encontrado" });
     }
+
+    const [files] = await pool.query(
+      `SELECT id, nombre_archivo, ruta_archivo, tipo_archivo, fecha_creacion
+       FROM archivos
+       WHERE id_proyecto = ?
+       ORDER BY fecha_creacion DESC`,
+      [projectId]
+    );
+
+    const isExternalUrl = (url) =>
+      !!url && (String(url).startsWith("http://") || String(url).startsWith("https://"));
+
+    const mappedFiles = files.map((file) => {
+      const ruta = String(file.ruta_archivo || "");
+      const external = isExternalUrl(ruta);
+
+      // Si ruta_archivo es interna (relativa), expón una URL pública (si también sirves /uploads como estático)
+      // Ej: baseUrl + "/uploads/pdf/archivo.pdf"
+      const publicUrl = external ? ruta : `${baseUrl}/${ruta.replace(/^\//, "")}`;
+
+      return {
+        id: file.id,
+        nombre: file.nombre_archivo,
+        tipo: file.tipo_archivo,
+        fechaCreacion: file.fecha_creacion,
+        urlDescarga: `/api/archivos/descargar/${file.id}`,
+        ruta_archivo: publicUrl,
+      };
+    });
+
+    return res.status(200).json({ total: mappedFiles.length, archivos: mappedFiles });
+  } catch (error) {
+    console.error("Error al obtener archivos:", error);
+    return res.status(500).json({ message: "Error interno al obtener archivos" });
+  }
 };
 
-
-// Controlador para descargar un archivo
+// =====================================================
+// DESCARGAR ARCHIVO
+// =====================================================
 export const downloadFile = async (req, res) => {
-    try {
-        const { fileId } = req.params;
+  try {
+    const { fileId } = req.params;
 
-        // Buscar información del archivo
-        const [files] = await pool.query(
-            `
-        SELECT
-            nombre_archivo,
-            ruta_archivo
-        FROM
-            archivos
-        WHERE
-            id = ?
-            `,
-            [fileId]
-        );
+    const [files] = await pool.query(
+      `SELECT nombre_archivo, ruta_archivo FROM archivos WHERE id = ?`,
+      [fileId]
+    );
 
-        if (files.length === 0) {
-            return res.status(404).json({ message: 'Archivo no encontrado' });
-        }
-
-        const file = files[0];
-        const currentFilePath = file.ruta_archivo;
-
-        const fullPath = path.join(__dirname, '../../', currentFilePath);
-        console.log(fullPath);
-
-        // Verificar si el archivo existe
-        try {
-            await fs.access(fullPath);
-        } catch (error) {
-            return res.status(404).json({ message: 'Archivo físico no encontrado' });
-        }
-
-        // Configurar headers para descarga
-        res.setHeader('Content-Disposition', `attachment; filename=${file.nombre_archivo}`);
-
-        // Enviar archivo
-        res.download(fullPath, file.nombre_archivo, (err) => {
-            if (err) {
-                console.error('Error al descargar archivo:', err);
-                res.status(500).json({ message: 'Error al descargar archivo' });
-            }
-        });
-
-    } catch (error) {
-        console.error('Error al descargar archivo:', error);
-        res.status(500).json({ message: 'Error interno al descargar archivo' });
+    if (files.length === 0) {
+      return res.status(404).json({ message: "Archivo no encontrado" });
     }
+
+    const file = files[0];
+    const currentFilePath = String(file.ruta_archivo || "");
+
+    // No descargues URLs externas desde tu FS
+    if (currentFilePath.startsWith("http://") || currentFilePath.startsWith("https://")) {
+      return res.status(400).json({ message: "Este archivo es externo y no se descarga desde el servidor." });
+    }
+
+    // Resuelve path real dentro de UPLOADS_ROOT (portable + seguro)
+    let fullPath;
+    try {
+      fullPath = resolveSafeUploadPath(currentFilePath);
+    } catch (e) {
+      return res.status(400).json({ message: "Ruta inválida" });
+    }
+
+    try {
+      await fs.access(fullPath);
+    } catch (_) {
+      return res.status(404).json({ message: "Archivo físico no encontrado" });
+    }
+
+    // Soporte UTF-8 para nombres (acentos/ñ) con filename* [web:140]
+    const encoded = encodeURIComponent(file.nombre_archivo);
+    res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encoded}`);
+
+    return res.download(fullPath);
+  } catch (error) {
+    console.error("Error al descargar archivo:", error);
+    return res.status(500).json({ message: "Error interno al descargar archivo" });
+  }
 };
 
-// Controlador para eliminar un archivo
+// =====================================================
+// ELIMINAR ARCHIVO
+// =====================================================
 export const deleteFile = async (req, res) => {
-    try {
-        const { fileId } = req.params;
+  try {
+    const { fileId } = req.params;
 
-        // Buscar información del archivo
-        const [files] = await pool.query(
-            `SELECT 
-                id, 
-                nombre_archivo, 
-                ruta_archivo 
-            FROM archivos 
-            WHERE id = ?`,
-            [fileId]
-        );
+    const [files] = await pool.query(
+      `SELECT id, nombre_archivo, ruta_archivo FROM archivos WHERE id = ?`,
+      [fileId]
+    );
 
-        if (files.length === 0) {
-            return res.status(404).json({ message: 'Archivo no encontrado' });
-        }
-
-        const file = files[0];
-
-        // Eliminar archivo físico
-        try {
-            await fs.unlink(file.ruta_archivo);
-        } catch (error) {
-            console.warn('Archivo físico no encontrado, continuando con eliminación de registro');
-        }
-
-        // Eliminar registro de la base de datos
-        const [result] = await pool.query(
-            'DELETE FROM archivos WHERE id = ?',
-            [fileId]
-        );
-
-        res.status(200).json({
-            message: 'Archivo eliminado correctamente',
-            archivoEliminado: file.nombre_archivo
-        });
-
-    } catch (error) {
-        console.error('Error al eliminar archivo:', error);
-        res.status(500).json({ message: 'Error interno al eliminar archivo' });
+    if (files.length === 0) {
+      return res.status(404).json({ message: "Archivo no encontrado" });
     }
+
+    const file = files[0];
+    const ruta = String(file.ruta_archivo || "");
+
+    // Si es archivo local, intenta borrarlo físicamente
+    if (!(ruta.startsWith("http://") || ruta.startsWith("https://"))) {
+      try {
+        const fullPath = resolveSafeUploadPath(ruta);
+        await fs.unlink(fullPath);
+      } catch (error) {
+        console.warn("Archivo físico no encontrado o no se pudo borrar, continuando:", error.message);
+      }
+    }
+
+    await pool.query("DELETE FROM archivos WHERE id = ?", [fileId]);
+
+    return res.status(200).json({
+      message: "Archivo eliminado correctamente",
+      archivoEliminado: file.nombre_archivo,
+    });
+  } catch (error) {
+    console.error("Error al eliminar archivo:", error);
+    return res.status(500).json({ message: "Error interno al eliminar archivo" });
+  }
 };
