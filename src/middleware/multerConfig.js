@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 
 // Crear directorio temporal si no existe
-const tempDir = './temp_videos';
+const tempDir = './uploads/videos';
 if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir, { recursive: true });
 }
