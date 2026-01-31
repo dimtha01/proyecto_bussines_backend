@@ -1,7 +1,7 @@
 import express from 'express';
 
 import { videoUpload } from '../middleware/multerConfig.js';
-import { uploadVideoController } from '../controllers/videoYoutube.controller.js';
+import { uploadVideoLocalController } from '../controllers/videoYoutube.controller.js';
 
 const router = express.Router();
 
@@ -12,6 +12,7 @@ const router = express.Router();
 // router.post('/save-token', saveTokenController);
 
 // Ruta para subir video a YouTube
-router.post('/upload/:id_proyecto', videoUpload.single('video'), uploadVideoController);
+// router.post('/upload/:id_proyecto', videoUpload.single('video'), uploadVideoController);
+router.post('/upload/video/:id_proyecto', videoUpload.single('video'), uploadVideoLocalController);
 
 export default router;
