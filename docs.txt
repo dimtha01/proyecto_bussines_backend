@@ -1,0 +1,323 @@
+# API DE ARCHIVOS POR PROYECTO - Documentación de Uso
+====================================================
+
+## RESUMEN GENERAL
+-----------------
+Sistema de gestión de archivos asociados a proyectos. Permite subir, listar,
+descargar y eliminar archivos con soporte para imágenes, PDFs y documentos.
+
+## RUTAS DISPONIBLES
+-------------------
+
+### 1. SUBIR ARCHIVOS A UN PROYECTO
+POST /api/archivos/proyectos/:projectId/upload
+
+Descripción: Sube uno o varios archivos y los asocia a un proyecto específico.
+
+Parámetros de URL:
+  - projectId: ID del proyecto (obligatorio)
+
+Body (FormData):
+  - files: Archivo(s) a subir (campo name="files")
+    * Mínimo: 1 archivo
+    * Máximo: 10 archivos por solicitud
+    * Tamaño máximo: 50 MB por archivo
+
+Tipos de archivo permitidos:
+  - Imágenes: JPEG, PNG, WebP, GIF
+  - Documentos PDF: application/pdf
+  - Documentos de Office:
+    * Word (.doc, .docx)
+    * Excel (.xls, .xlsx, .xlsm, .xlam)
+    * CSV
+
+Respuesta exitosa (201):
+{
+  "message": "X archivo(s) guardados correctamente.",
+  "files": [
+    { "nombre": "documento.pdf", "tipo": "pdf" },
+    { "nombre": "imagen.jpg", "tipo": "image" }
+  ]
+}
+
+Errores comunes:
+  - 400: No se subieron archivos o tipo no permitido
+  - 404: Proyecto no encontrado
+  - 500: Error interno del servidor
+
+Ejemplo cURL:
+curl -X POST http://localhost:3000/api/archivos/proyectos/1/upload \
+  -F "files=@/ruta/al/archivo.pdf" \
+  -F "files=@/ruta/al/otro.docx"
+
+Ejemplo JavaScript/Fetch:
+const formData = new FormData();
+formData.append('files', fileInput.files[0]);
+formData.append('files', fileInput.files[1]);
+
+fetch('http://localhost:3000/api/archivos/proyectos/1/upload', {
+  method: 'POST',
+  body: formData
+})
+.then(res => res.json())
+.then(data => console.log(data));
+
+
+### 2. LISTAR ARCHIVOS DE UN PROYECTO
+GET /api/archivos/proyectos/:projectId/files
+
+Descripción: Obtiene la lista completa de archivos asociados a un proyecto.
+
+Parámetros de URL:
+  - projectId: ID del proyecto (obligatorio)
+
+Respuesta exitosa (200):
+{
+  "total": 3,
+  "archivos": [
+    {
+      "id": 123,
+      "nombre": "documento-importante.pdf",
+      "tipo": "pdf",
+      "fechaCreacion": "2024-01-15T10:30:00.000Z",
+      "urlDescarga": "/api/archivos/descargar/123",
+      "ruta_archivo": "http://localhost:3000/uploads/pdf/documento-importante-1234567890.pdf"
+    },
+    {
+      "id": 124,
+      "nombre": "diagrama.png",
+      "tipo": "image",
+      "fechaCreacion": "2024-01-15T11:00:00.000Z",
+      "urlDescarga": "/api/archivos/descargar/124",
+      "ruta_archivo": "http://localhost:3000/uploads/image/diagrama-1234567891.png"
+    }
+  ]
+}
+
+Errores comunes:
+  - 404: Proyecto no encontrado
+  - 500: Error interno del servidor
+
+Ejemplo cURL:
+curl http://localhost:3000/api/archivos/proyectos/1/files
+
+Ejemplo JavaScript/Fetch:
+fetch('http://localhost:3000/api/archivos/proyectos/1/files')
+  .then(res => res.json())
+  .then(data => console.log(data.archivos));
+
+
+### 3. DESCARGAR UN ARCHIVO
+GET /api/archivos/descargar/:fileId
+
+Descripción: Descarga un archivo específico por su ID. El navegador recibirá
+el archivo como descarga (attachment).
+
+Parámetros de URL:
+  - fileId: ID del archivo (obligatorio)
+
+Respuesta:
+  - Archivo binario con header Content-Disposition para descarga
+  - Soporta nombres con acentos y caracteres especiales (UTF-8)
+
+Errores comunes:
+  - 400: Ruta inválida o archivo es URL externa
+  - 404: Archivo no encontrado (en BD o físicamente)
+  - 500: Error interno del servidor
+
+Ejemplo cURL:
+curl -O -J http://localhost:3000/api/archivos/descargar/123
+
+Ejemplo JavaScript/Fetch:
+fetch('http://localhost:3000/api/archivos/descargar/123')
+  .then(res => res.blob())
+  .then(blob => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'archivo.pdf';
+    a.click();
+  });
+
+
+### 4. ELIMINAR UN ARCHIVO
+DELETE /api/archivos/eliminar/:fileId
+
+Descripción: Elimina un archivo de la base de datos y del sistema de archivos.
+
+Parámetros de URL:
+  - fileId: ID del archivo (obligatorio)
+
+Respuesta exitosa (200):
+{
+  "message": "Archivo eliminado correctamente",
+  "archivoEliminado": "documento.pdf"
+}
+
+Notas importantes:
+  - Si el archivo es local, también se elimina físicamente del disco
+  - Si el archivo es una URL externa, solo se elimina el registro de BD
+  - La operación es irreversible
+
+Errores comunes:
+  - 404: Archivo no encontrado
+  - 500: Error interno del servidor
+
+Ejemplo cURL:
+curl -X DELETE http://localhost:3000/api/archivos/eliminar/123
+
+Ejemplo JavaScript/Fetch:
+fetch('http://localhost:3000/api/archivos/eliminar/123', {
+  method: 'DELETE'
+})
+.then(res => res.json())
+.then(data => console.log(data));
+
+
+## CONFIGURACIÓN Y ALMACENAMIENTO
+---------------------------------
+
+### Estructura de directorios
+Los archivos se organizan automáticamente por tipo en la carpeta "uploads/":
+
+uploads/
+├── image/          # Imágenes (jpg, png, webp, gif)
+├── pdf/            # Documentos PDF
+└── document/       # Documentos de Office (Word, Excel, CSV)
+
+### Nomenclatura de archivos
+Los archivos son renombrados automáticamente con slugify:
+  - Nombre original: "Mi Documento Importante (2024).pdf"
+  - Nombre guardado: "mi-documento-importante-2024-1234567890.pdf"
+
+Formato: {nombre-slugificado}-{timestamp}{extension}
+
+### Variables de entorno
+UPLOADS_ROOT: Ruta raíz para almacenamiento (opcional)
+  - Si no se define, usa: ./uploads/ (relativo al directorio del proyecto)
+  - Recomendado para producción: definir ruta absoluta
+
+Ejemplo .env:
+UPLOADS_ROOT=/var/www/app/uploads
+
+
+## BASE DE DATOS
+---------------
+
+### Tabla: archivos
+Campos principales:
+  - id: ID único del archivo (PRIMARY KEY)
+  - id_proyecto: ID del proyecto asociado (FOREIGN KEY)
+  - nombre_archivo: Nombre original del archivo
+  - ruta_archivo: Ruta relativa del archivo (ej: "uploads/pdf/archivo.pdf")
+  - tipo_archivo: Tipo de archivo ('image', 'pdf', 'document')
+  - fecha_creacion: Timestamp de creación
+
+
+## SEGURIDAD Y VALIDACIONES
+---------------------------
+
+### Límites de subida
+  - Tamaño máximo: 50 MB por archivo
+  - Cantidad máxima: 10 archivos por solicitud
+  - Tipos permitidos: Solo los especificados en "Tipos de archivo permitidos"
+
+### Protección contra path traversal
+El sistema implementa validación de rutas para evitar accesos no autorizados:
+  - Las rutas se resuelven siempre dentro de UPLOADS_ROOT
+  - Se detecta y rechaza intentos de path traversal (../)
+
+### Validación de proyectos
+  - Se verifica que el proyecto existe antes de subir/listar archivos
+  - Se retorna 404 si el proyecto no existe
+
+
+## EJEMPLO COMPLETO DE INTEGRACIÓN
+----------------------------------
+
+### HTML - Formulario de subida
+<form id="uploadForm">
+  <input type="file" name="files" multiple accept=".pdf,.doc,.docx,.jpg,.png">
+  <button type="submit">Subir Archivos</button>
+</form>
+
+### JavaScript - Subir archivos
+document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const formData = new FormData();
+  const files = document.querySelector('input[name="files"]').files;
+
+  // Agregar cada archivo al FormData
+  for (let file of files) {
+    formData.append('files', file);
+  }
+
+  try {
+    const response = await fetch(
+      `http://localhost:3000/api/archivos/proyectos/${projectId}/upload`,
+      { method: 'POST', body: formData }
+    );
+    const result = await response.json();
+    console.log('Archivos subidos:', result);
+  } catch (error) {
+    console.error('Error al subir:', error);
+  }
+});
+
+### JavaScript - Listar y mostrar archivos
+async function cargarArchivos(projectId) {
+  const response = await fetch(
+    `http://localhost:3000/api/archivos/proyectos/${projectId}/files`
+  );
+  const data = await response.json();
+
+  data.archivos.forEach(archivo => {
+    console.log(`${archivo.nombre} (${archivo.tipo})`);
+    console.log(`Descargar: ${archivo.urlDescarga}`);
+  });
+}
+
+### JavaScript - Descargar archivo
+function descargarArchivo(fileId) {
+  window.open(`http://localhost:3000/api/archivos/descargar/${fileId}`, '_blank');
+}
+
+### JavaScript - Eliminar archivo
+async function eliminarArchivo(fileId) {
+  if (!confirm('¿Estás seguro de eliminar este archivo?')) return;
+
+  const response = await fetch(
+    `http://localhost:3000/api/archivos/eliminar/${fileId}`,
+    { method: 'DELETE' }
+  );
+  const result = await response.json();
+  console.log(result.message);
+}
+
+
+## NOTAS IMPORTANTES
+-------------------
+
+1. Los archivos se renombran automáticamente para evitar conflictos
+2. Las rutas almacenadas en BD son relativas para portabilidad
+3. El sistema soporta URLs externas (no se descargan del servidor)
+4. Los nombres de archivo con caracteres especiales usan encoding UTF-8
+5. Si se elimina un archivo local, se intenta borrar también del disco físico
+
+
+## CÓDIGOS DE ESTADO HTTP
+--------------------------
+
+- 200: Operación exitosa (listar, eliminar)
+- 201: Recurso creado (subir archivos)
+- 400: Solicitud inválida (sin archivos, tipo no permitido, ruta inválida)
+- 404: Recurso no encontrado (proyecto o archivo)
+- 500: Error interno del servidor
+
+
+## ARCHIVOS RELACIONADOS
+------------------------
+
+- src/routes/archivos.routes.js     # Definición de rutas
+- src/controllers/archivos.controller.js  # Lógica de negocio
+- src/middleware/multer.middleware.js     # Configuración de subida

@@ -82,7 +82,7 @@ export const uploadProjectFiles = async (req, res) => {
 export const getProjectFiles = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const baseUrl = `http://${req.get("host")}`;
 
     const [projectExists] = await pool.query("SELECT id FROM proyectos WHERE id = ?", [projectId]);
     if (projectExists.length === 0) {
