@@ -132,3 +132,47 @@ export const uploadMiddleware = (req, res, next) => {
 export function getRelativeFilePath(fullPath) {
   return path.relative(process.cwd(), fullPath);
 }
+
+// =====================================================
+// MIDDLEWARE PARA APK
+// =====================================================
+const apkStorage = multer.diskStorage({
+  destination(req, file, cb) {
+    const apkDir = path.join(rootDir, 'apk');
+    if (!fs.existsSync(apkDir)) {
+      fs.mkdirSync(apkDir, { recursive: true });
+    }
+    cb(null, apkDir);
+  },
+  filename(req, file, cb) {
+    const slugifiedName = slugify(path.parse(file.originalname).name, {
+      replacement: '-',
+      lower: true,
+      strict: true,
+      trim: true
+    });
+    const ext = path.extname(file.originalname).toLowerCase();
+    const uniqueName = `${slugifiedName}-${Date.now()}${ext}`;
+    cb(null, uniqueName);
+  }
+});
+
+const apkFileFilter = (req, file, cb) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  const mimetype = file.mimetype;
+
+  if (ext === '.apk' || mimetype === 'application/vnd.android.package-archive' || mimetype === 'application/octet-stream') {
+    cb(null, true);
+  } else {
+    cb(new Error('Solo se permiten archivos .apk'));
+  }
+};
+
+export const uploadApkMiddleware = multer({
+  storage: apkStorage,
+  fileFilter: apkFileFilter,
+  limits: {
+    fileSize: 200 * 1024 * 1024, // 200 MB máximo para APKs
+    files: 1
+  }
+}).single('apk');
