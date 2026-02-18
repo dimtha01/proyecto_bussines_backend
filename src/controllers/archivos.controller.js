@@ -3,6 +3,7 @@ import { pool } from "../db.js";
 import { detectFileType } from "../middleware/multer.middleware.js";
 import fs from "fs/promises";
 import path from "path";
+import { emitNotification } from "../socket.js";
 
 // =====================================================
 // CONFIG: Root absoluto de uploads (portable local/prod)
@@ -15,6 +16,15 @@ const UPLOADS_ROOT = process.env.UPLOADS_ROOT
 const toUploadsRelative = (rutaArchivo) => {
   const p = String(rutaArchivo || "").replace(/\\/g, "/").replace(/^\//, "");
   return p.startsWith("uploads/") ? p.slice("uploads/".length) : p;
+};
+
+// Formatear tamaño de archivo en bytes a formato legible
+const formatearTamano = (bytes) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const tamaños = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + tamaños[i];
 };
 
 // Construye el path absoluto real dentro de UPLOADS_ROOT y valida que no se salga
@@ -66,6 +76,81 @@ export const uploadProjectFiles = async (req, res) => {
       [values]
     );
 
+    // Obtener información del proyecto para la notificación
+    const [projectInfo] = await pool.query(
+      "SELECT id, nombre, nombre_cortos FROM proyectos WHERE id = ?",
+      [projectId]
+    );
+
+    // Usar nombre_cortos si existe, sino el nombre completo
+    const nombreProyecto = projectInfo[0]?.nombre_cortos || projectInfo[0]?.nombre || `Proyecto #${projectId}`;
+
+    // Crear lista detallada de archivos para la notificación
+    const archivosDetallados = files.map((file) => {
+      const tipo = detectFileType(file.mimetype);
+      const tamanoBytes = file.size;
+      const tamanoFormateado = formatearTamano(tamanoBytes);
+
+      return {
+        nombre: file.originalname,
+        tipo: tipo,
+        tamano: tamanoFormateado,
+        tamanoBytes: tamanoBytes,
+        mimetype: file.mimetype,
+      };
+    });
+
+    // Agrupar archivos por tipo
+    const archivosPorTipo = archivosDetallados.reduce((acc, arch) => {
+      acc[arch.tipo] = (acc[arch.tipo] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Calcular tamaño total
+    const tamanoTotalBytes = archivosDetallados.reduce((sum, arch) => sum + arch.tamanoBytes, 0);
+    const tamanoTotal = formatearTamano(tamanoTotalBytes);
+
+    // Crear mensaje detallado
+    const tipoTexto = Object.entries(archivosPorTipo)
+      .map(([tipo, cantidad]) => `${cantidad} ${tipo}${cantidad > 1 ? 's' : ''}`)
+      .join(', ');
+
+    const titulo = "Nuevos archivos subidos";
+    const mensaje = `Se han subido ${result.affectedRows} archivo${result.affectedRows > 1 ? 's' : ''} a "${nombreProyecto}" (${tamanoTotal})`;
+
+    const datosNotificacion = {
+      proyecto: {
+        id: parseInt(projectId),
+        nombre: nombreProyecto,
+      },
+      resumen: {
+        cantidadArchivos: result.affectedRows,
+        tamanoTotal: tamanoTotal,
+        tamanoTotalBytes: tamanoTotalBytes,
+        tipos: archivosPorTipo,
+      },
+      archivos: archivosDetallados,
+      fecha: new Date().toISOString(),
+    };
+
+    const [notifResult] = await pool.query(
+      `INSERT INTO notificaciones (id_proyecto, titulo, mensaje, tipo, datos)
+       VALUES (?, ?, ?, 'archivo_subido', ?)`,
+      [projectId, titulo, mensaje, JSON.stringify(datosNotificacion)]
+    );
+
+    // Emitir notificación por WebSocket
+    emitNotification({
+      id: notifResult.insertId,
+      id_proyecto: parseInt(projectId),
+      titulo,
+      mensaje,
+      tipo: "archivo_subido",
+      leida: false,
+      datos: datosNotificacion,
+      fecha_creacion: datosNotificacion.fecha,
+    });
+
     return res.status(201).json({
       message: `${result.affectedRows} archivo(s) guardados correctamente.`,
       files: values.map((v) => ({ nombre: v[1], tipo: v[3] })),
@@ -82,7 +167,7 @@ export const uploadProjectFiles = async (req, res) => {
 export const getProjectFiles = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const baseUrl = `https://${req.get("host")}`;
+    const baseUrl = `${req.protocol}://${req.get("host")}`
 
     const [projectExists] = await pool.query("SELECT id FROM proyectos WHERE id = ?", [projectId]);
     if (projectExists.length === 0) {

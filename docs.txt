@@ -321,3 +321,601 @@ async function eliminarArchivo(fileId) {
 - src/routes/archivos.routes.js     # Definición de rutas
 - src/controllers/archivos.controller.js  # Lógica de negocio
 - src/middleware/multer.middleware.js     # Configuración de subida
+
+
+================================================================================
+                    API DE NOTIFICACIONES - WEBSOCKET
+                          (SOCKET.IO)
+================================================================================
+
+## RESUMEN GENERAL
+-----------------
+Sistema de notificaciones en tiempo real que se crea automáticamente cada vez
+que se sube un archivo a un proyecto. Las notificaciones se guardan en la
+base de datos y se envían a todos los clientes conectados vía WebSocket.
+
+
+## CONFIGURACIÓN PREVIA
+----------------------
+
+1. Ejecutar el script SQL para crear la tabla de notificaciones:
+   mysql -u tu_usuario -p tu_base_datos < db/notificaciones.sql
+
+2. Iniciar el servidor (WebSocket se inicia automáticamente):
+   npm run dev
+
+
+## ENDPOINTS API REST
+-------------------
+
+BASE URL: http://localhost:3000/api/notificaciones
+
+### 1. OBTENER TODAS LAS NOTIFICACIONES
+GET /api/notificaciones
+
+Query Params (opcionales):
+  - proyectoId: (number) - Filtrar por proyecto específico
+  - noLeidas: (boolean) - Solo traer no leídas (true)
+
+Ejemplos:
+  GET /api/notificaciones
+  GET /api/notificaciones?proyectoId=5
+  GET /api/notificaciones?noLeidas=true
+  GET /api/notificaciones?proyectoId=5&noLeidas=true
+
+Respuesta exitosa (200):
+{
+  "total": 10,
+  "notificaciones": [
+    {
+      "id": 1,
+      "id_proyecto": 5,
+      "titulo": "Archivos subidos",
+      "mensaje": "Se han subido 2 archivo(s) al proyecto.",
+      "tipo": "archivo_subido",
+      "leida": 0,
+      "datos": { "archivos": ["documento.pdf", "imagen.jpg"] },
+      "fecha_creacion": "2025-01-15T10:30:00.000Z",
+      "nombre_proyecto": "Proyecto Alpha"
+    }
+  ]
+}
+
+
+### 2. CONTAR NOTIFICACIONES NO LEÍDAS
+GET /api/notificaciones/contar-no-leidas
+
+Query Params (opcionales):
+  - proyectoId: (number) - Contar solo de un proyecto específico
+
+Ejemplos:
+  GET /api/notificaciones/contar-no-leidas
+  GET /api/notificaciones/contar-no-leidas?proyectoId=5
+
+Respuesta exitosa (200):
+{
+  "noLeidas": 3
+}
+
+
+### 3. OBTENER NOTIFICACIONES DE UN PROYECTO
+GET /api/notificaciones/proyectos/:projectId
+
+Parámetros de URL:
+  - projectId: ID del proyecto (obligatorio)
+
+Ejemplo:
+  GET /api/notificaciones/proyectos/5
+
+Respuesta exitosa (200):
+{
+  "total": 2,
+  "notificaciones": [...]
+}
+
+
+### 4. MARCAR NOTIFICACIÓN COMO LEÍDA
+PATCH /api/notificaciones/:notificationId/leer
+
+Parámetros de URL:
+  - notificationId: ID de la notificación (obligatorio)
+
+Ejemplo:
+  PATCH /api/notificaciones/10/leer
+
+Respuesta exitosa (200):
+{
+  "message": "Notificación marcada como leída"
+}
+
+
+### 5. MARCAR TODAS COMO LEÍDAS
+PATCH /api/notificaciones/marcar-todas-leidas
+
+Body (opcional):
+{
+  "proyectoId": 5  // Si se envía, solo marca las de ese proyecto
+}
+
+Ejemplo:
+  PATCH /api/notificaciones/marcar-todas-leidas
+
+Respuesta exitosa (200):
+{
+  "message": "Todas las notificaciones marcadas como leídas"
+}
+
+
+### 6. ELIMINAR NOTIFICACIÓN
+DELETE /api/notificaciones/:notificationId
+
+Parámetros de URL:
+  - notificationId: ID de la notificación (obligatorio)
+
+Ejemplo:
+  DELETE /api/notificaciones/10
+
+Respuesta exitosa (200):
+{
+  "message": "Notificación eliminada correctamente"
+}
+
+
+## EVENTOS WEBSOCKET
+-------------------
+
+Servidor WebSocket: http://localhost:3000
+
+### EVENTOS QUE ENVÍA EL SERVIDOR (escuchar en el cliente):
+
+1. nueva_notificacion
+   - Emitido cuando se crea CUALQUIER notificación
+   - Recibido por TODOS los clientes conectados
+
+2. notificacion_proyecto
+   - Emitido cuando se crea una notificación para un proyecto específico
+   - Solo recibido por clientes unidos a la sala de ese proyecto
+
+Datos recibidos en ambos eventos:
+{
+  "id": 1,
+  "id_proyecto": 5,
+  "titulo": "Archivos subidos",
+  "mensaje": "Se han subido 2 archivo(s) al proyecto.",
+  "tipo": "archivo_subido",
+  "leida": false,
+  "datos": { "archivos": ["documento.pdf"] },
+  "fecha_creacion": "2025-01-15T10:30:00.000Z"
+}
+
+### EVENTOS QUE ENVÍA EL CLIENTE (emitir al servidor):
+
+1. unir_proyecto
+   - Une al cliente a la sala de un proyecto específico
+   - Parámetro: projectId (number)
+
+2. salir_proyecto
+   - Saca al cliente de la sala de un proyecto
+   - Parámetro: projectId (number)
+
+
+## EJEMPLO FRONTEND - JAVASCRIPT VAINILLA (MEJORADO)
+-------------------------------------------------------
+
+Ver index.html en la raíz del proyecto para una implementación completa con:
+- Diseño moderno con gradientes y animaciones
+- Indicador de estado de conexión WebSocket
+- Filtrado por ID de proyecto
+- Lista detallada de archivos con iconos por tipo
+- Notificaciones nativas del navegador
+- Marcado como leído sin recargar página
+- Contador de no leídas en tiempo real
+
+Características del frontend mejorado:
+
+✅ Estado de conexión WebSocket (Conectado/Desconectado)
+✅ Badge con contador de notificaciones no leídas
+✅ Nombre del proyecto en badge destacado
+✅ Lista de archivos con:
+   - Icono por tipo (📄 PDF, 🖼️ Imagen, 📝 Documento)
+   - Nombre del archivo
+   - Tamaño formateado (KB, MB)
+✅ Tiempo relativo ("Hace 5 min", "Ahora", etc.)
+✅ Animación de entrada para nuevas notificaciones
+✅ Filtro por proyecto
+✅ Marcar individual o todas como leídas
+
+Configuración rápida:
+const API_URL = 'http://localhost:3000/api/notificaciones';
+const WS_URL = 'http://localhost:3000';
+const PROJECT_ID = null;  // null = todos los proyectos
+
+Abrir en navegador: http://localhost:3000/index.html
+
+
+## EJEMPLO FRONTEND - REACT
+--------------------------
+
+Instalar dependencias:
+npm install socket.io-client
+
+// hooks/useNotifications.js
+import { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3000');
+
+export const useNotifications = (projectId) => {
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    // Unirse a la sala del proyecto
+    if (projectId) {
+      socket.emit('unir_proyecto', projectId);
+    }
+
+    // Escuchar notificaciones globales
+    socket.on('nueva_notificacion', (notification) => {
+      setNotifications(prev => [notification, ...prev]);
+      setUnreadCount(prev => prev + 1);
+      mostrarNotificacionNativa(notification);
+    });
+
+    // Escuchar notificaciones del proyecto
+    socket.on('notificacion_proyecto', (notification) => {
+      setNotifications(prev => [notification, ...prev]);
+    });
+
+    // Cargar contador inicial
+    fetchUnreadCount();
+
+    return () => {
+      socket.off('nueva_notificacion');
+      socket.off('notificacion_proyecto');
+      if (projectId) {
+        socket.emit('salir_proyecto', projectId);
+      }
+    };
+  }, [projectId]);
+
+  const fetchUnreadCount = async () => {
+    const response = await fetch('http://localhost:3000/api/notificaciones/contar-no-leidas');
+    const data = await response.json();
+    setUnreadCount(data.noLeidas);
+  };
+
+  const markAsRead = async (notificationId) => {
+    await fetch(`http://localhost:3000/api/notificaciones/${notificationId}/leer`, {
+      method: 'PATCH'
+    });
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+
+  const markAllAsRead = async () => {
+    await fetch('http://localhost:3000/api/notificaciones/marcar-todas-leidas', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    setUnreadCount(0);
+  };
+
+  return { notifications, unreadCount, markAsRead, markAllAsRead };
+};
+
+// Mostrar notificación nativa del navegador
+const mostrarNotificacionNativa = (notification) => {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(notification.titulo, {
+      body: notification.mensaje,
+      icon: '/icon.png'
+    });
+  }
+};
+
+// components/NotificationList.jsx
+import React from 'react';
+import { useNotifications } from '../hooks/useNotifications';
+
+export const NotificationList = ({ projectId }) => {
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(projectId);
+
+  return (
+    <div className="notification-container">
+      <div className="notification-header">
+        <h2>Notificaciones</h2>
+        <span className="badge">{unreadCount} sin leer</span>
+      </div>
+
+      {unreadCount > 0 && (
+        <button onClick={markAllAsRead} className="mark-all-btn">
+          Marcar todas como leídas
+        </button>
+      )}
+
+      <div className="notification-list">
+        {notifications.map(notif => (
+          <div
+            key={notif.id}
+            className={`notification-item ${!notif.leida ? 'unread' : ''}`}
+          >
+            <h3>{notif.titulo}</h3>
+            <p>{notif.mensaje}</p>
+            <small>{new Date(notif.fecha_creacion).toLocaleString()}</small>
+            {!notif.leida && (
+              <button onClick={() => markAsRead(notif.id)}>
+                Marcar como leída
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+
+## EJEMPLO FRONTEND - VUE 3
+--------------------------
+
+Instalar dependencias:
+npm install socket.io-client
+
+// composables/useNotifications.js
+import { ref, onMounted, onUnmounted } from 'vue';
+import { io } from 'socket.io-client';
+
+export function useNotifications(projectId) {
+  const notifications = ref([]);
+  const unreadCount = ref(0);
+
+  const socket = io('http://localhost:3000');
+
+  const fetchUnreadCount = async () => {
+    const response = await fetch('http://localhost:3000/api/notificaciones/contar-no-leidas');
+    const data = await response.json();
+    unreadCount.value = data.noLeidas;
+  };
+
+  const markAsRead = async (notificationId) => {
+    await fetch(`http://localhost:3000/api/notificaciones/${notificationId}/leer`, {
+      method: 'PATCH'
+    });
+    unreadCount.value = Math.max(0, unreadCount.value - 1);
+  };
+
+  onMounted(() => {
+    if (projectId.value) {
+      socket.emit('unir_proyecto', projectId.value);
+    }
+
+    socket.on('nueva_notificacion', (notification) => {
+      notifications.value.unshift(notification);
+      unreadCount.value++;
+    });
+
+    socket.on('notificacion_proyecto', (notification) => {
+      notifications.value.unshift(notification);
+    });
+
+    fetchUnreadCount();
+
+    // Solicitar permiso para notificaciones nativas
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  });
+
+  onUnmounted(() => {
+    socket.off('nueva_notificacion');
+    socket.off('notificacion_proyecto');
+    if (projectId.value) {
+      socket.emit('salir_proyecto', projectId.value);
+    }
+  });
+
+  return {
+    notifications,
+    unreadCount,
+    markAsRead
+  };
+}
+
+<!-- Componente NotificationList.vue -->
+<template>
+  <div class="notification-container">
+    <div class="header">
+      <h2>Notificaciones</h2>
+      <span class="badge">{{ unreadCount }} sin leer</span>
+    </div>
+
+    <div v-for="notif in notifications" :key="notif.id"
+         :class="['notification-item', { unread: !notif.leida }]">
+      <h3>{{ notif.titulo }}</h3>
+      <p>{{ notif.mensaje }}</p>
+      <small>{{ new Date(notif.fecha_creacion).toLocaleString() }}</small>
+      <button v-if="!notif.leida" @click="markAsRead(notif.id)">
+        Marcar como leída
+      </button>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { useNotifications } from '@/composables/useNotifications';
+
+const props = defineProps({
+  projectId: {
+    type: Number,
+    required: true
+  }
+});
+
+const projectIdRef = ref(props.projectId);
+const { notifications, unreadCount, markAsRead } = useNotifications(projectIdRef);
+</script>
+
+
+## EJEMPLO FRONTEND - ANGULAR
+----------------------------
+
+Instalar dependencias:
+npm install socket.io-client
+
+// services/notification.service.ts
+import { Injectable } from '@angular/core';
+import { io, Socket } from 'socket.io-client';
+import { Observable } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+
+export interface Notification {
+  id: number;
+  id_proyecto: number;
+  titulo: string;
+  mensaje: string;
+  tipo: string;
+  leida: boolean;
+  datos?: any;
+  fecha_creacion: string;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class NotificationService {
+  private socket: Socket;
+  private baseUrl = 'http://localhost:3000/api/notificaciones';
+
+  constructor(private http: HttpClient) {
+    this.socket = io('http://localhost:3000');
+  }
+
+  // Observable para notificaciones
+  getNotifications(): Observable<Notification> {
+    return new Observable(observer => {
+      this.socket.on('nueva_notificacion', (data: Notification) => {
+        observer.next(data);
+      });
+      return () => this.socket.off('nueva_notificacion');
+    });
+  }
+
+  // Unirse a sala de proyecto
+  joinProject(projectId: number) {
+    this.socket.emit('unir_proyecto', projectId);
+  }
+
+  // Salir de sala de proyecto
+  leaveProject(projectId: number) {
+    this.socket.emit('salir_proyecto', projectId);
+  }
+
+  // API REST calls
+  getUnreadCount(proyectoId?: number) {
+    let url = `${this.baseUrl}/contar-no-leidas`;
+    if (proyectoId) url += `?proyectoId=${proyectoId}`;
+    return this.http.get<{ noLeidas: number }>(url);
+  }
+
+  markAsRead(notificationId: number) {
+    return this.http.patch(`${this.baseUrl}/${notificationId}/leer`, {});
+  }
+
+  markAllAsRead(proyectoId?: number) {
+    return this.http.patch(`${this.baseUrl}/marcar-todas-leidas`, { proyectoId });
+  }
+
+  getAllNotifications(proyectoId?: number) {
+    let url = this.baseUrl;
+    if (proyectoId) url += `?proyectoId=${proyectoId}`;
+    return this.http.get<{ total: number; notificaciones: Notification[] }>(url);
+  }
+}
+
+
+## ESTRUCTURA DE DATOS
+--------------------
+
+Objeto Notificación:
+
+{
+  id: number,              // ID único de la notificación
+  id_proyecto: number,     // ID del proyecto relacionado (opcional)
+  titulo: string,          // Título de la notificación
+  mensaje: string,         // Mensaje descriptivo
+  tipo: string,           // Tipo: 'archivo_subido', 'proyecto_actualizado', etc.
+  leida: boolean,         // Estado de lectura (false = no leída)
+  datos: object | null,   // Datos JSON adicionales
+  fecha_creacion: string   // ISO timestamp de creación
+}
+
+Ejemplo completo (MEJORADO):
+{
+  "id": 1,
+  "id_proyecto": 5,
+  "titulo": "📁 Nuevos archivos subidos",
+  "mensaje": "Se han subido 3 archivos a \"Proyecto Alpha\" (2.5 MB)",
+  "tipo": "archivo_subido",
+  "leida": false,
+  "datos": {
+    "proyecto": {
+      "id": 5,
+      "nombre": "Proyecto Alpha"
+    },
+    "resumen": {
+      "cantidadArchivos": 3,
+      "tamanoTotal": "2.5 MB",
+      "tamanoTotalBytes": 2621440,
+      "tipos": { "pdf": 1, "image": 2 }
+    },
+    "archivos": [
+      {
+        "nombre": "documento.pdf",
+        "tipo": "pdf",
+        "tamano": "1.2 MB",
+        "tamanoBytes": 1258291,
+        "mimetype": "application/pdf"
+      },
+      {
+        "nombre": "imagen.jpg",
+        "tipo": "image",
+        "tamano": "650 KB",
+        "tamanoBytes": 665856,
+        "mimetype": "image/jpeg"
+      }
+    ],
+    "fecha": "2025-01-15T10:30:00.000Z"
+  },
+  "fecha_creacion": "2025-01-15T10:30:00.000Z"
+}
+
+NOTA: El sistema usa el campo "nombre_cortos" de la tabla proyectos
+para el nombre mostrado. Si no existe, usa "nombre" completo.
+
+
+## BASE DE DATOS
+---------------
+
+Tabla: notificaciones
+
+Campos:
+  - id: ID único (PRIMARY KEY, AUTO_INCREMENT)
+  - id_proyecto: ID del proyecto relacionado (FOREIGN KEY)
+  - titulo: Título de la notificación (VARCHAR 255)
+  - mensaje: Mensaje descriptivo (TEXT)
+  - tipo: Tipo de notificación (VARCHAR 50)
+  - leida: Estado de lectura (TINYINT 1, 0 = no leída, 1 = leída)
+  - datos: Datos JSON adicionales (JSON, nullable)
+  - fecha_creacion: Timestamp de creación (TIMESTAMP)
+
+Relaciones:
+  - FOREIGN KEY (id_proyecto) REFERENCES proyectos(id) ON DELETE CASCADE
+
+
+## ARCHIVOS RELACIONADOS
+------------------------
+
+- src/socket.js                               # Configuración de Socket.io
+- src/controllers/notificaciones.controller.js # Lógica de notificaciones
+- src/routes/notificaciones.routes.js         # Rutas API
+- src/controllers/archivos.controller.js      # Emite notificaciones al subir

@@ -18,6 +18,7 @@ import authRoutes from "./routes/auth.routes.js"
 import userRoutes from "./routes/user.routes.js"
 import roleRoutes from "./routes/role.routes.js"
 import archivosRoutes from "./routes/archivos.routes.js";
+import notificacionesRoutes from "./routes/notificaciones.routes.js";
 import youtubeRoutes from "./routes/youtube.routes.js";
 import appRoutes from "./routes/app.routes.js";
 import path from 'path';
@@ -30,8 +31,7 @@ const app = express();
 
 // Middlewares
 const uploadsPath = path.join(__dirname, '../uploads');
-console.log("Serviendo desde:", uploadsPath);
-express.static(uploadsPath); // Asegúrate de que esta línea esté antes de las rutas para servir archivos estáticos
+console.log("Serviendo desde:", uploadsPath); // Asegúrate de que esta línea esté antes de las rutas para servir archivos estáticos
 app.use('/uploads', express.static(uploadsPath));
 
 app.use(cors()); // Habilita CORS para todas las rutas
@@ -56,6 +56,7 @@ app.use("/api/auth", authRoutes)
 app.use("/api/users", userRoutes)
 app.use("/api/roles", roleRoutes)
 app.use("/api/archivos", archivosRoutes);
+app.use("/api/notificaciones", notificacionesRoutes);
 app.use("/api/youtube", youtubeRoutes);
 app.use("/api/app", appRoutes);
 

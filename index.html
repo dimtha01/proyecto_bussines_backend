@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notificaciones</title>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    .header {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    .header h1 { font-size: 28px; color: #333; margin-bottom: 12px; }
+    .header-controls { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .counter { display: flex; align-items: center; gap: 12px; }
+    .badge {
+      background: linear-gradient(135deg, #f5576c, #f093fb);
+      color: white;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .badge.zero { background: #e0e0e0; color: #888; }
+    .btn {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .btn:disabled { background: #ccc; cursor: not-allowed; }
+    .btn-small { padding: 6px 12px; font-size: 12px; border-radius: 6px; }
+    .filter-bar {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .filter-bar input { flex: 1; padding: 10px; border: 2px solid #eee; border-radius: 8px; }
+    .notifications-list { display: flex; flex-direction: column; gap: 16px; }
+    .notification-card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      border-left: 4px solid #667eea;
+    }
+    .notification-card.unread { background: #fff3cd; border-left-color: #ffc107; }
+    .notif-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
+    .notif-title { font-size: 18px; font-weight: 600; color: #333; }
+    .notif-project {
+      background: #667eea;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+    .notif-time { font-size: 12px; color: #888; }
+    .notif-message { color: #555; margin-bottom: 12px; }
+    .notif-files { background: #f8f9fa; border-radius: 8px; padding: 12px; margin-top: 12px; }
+    .notif-files-title { font-size: 13px; color: #666; margin-bottom: 8px; }
+    .file-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
+    .file-item:last-child { border-bottom: none; }
+    .file-info { display: flex; align-items: center; gap: 10px; }
+    .file-icon {
+      width: 32px; height: 32px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .file-icon.pdf { background: #ffebee; color: #f44336; }
+    .file-icon.image { background: #e3f2fd; color: #2196f3; }
+    .file-icon.document { background: #fff3e0; color: #ff9800; }
+    .file-name { font-size: 14px; font-weight: 500; color: #333; }
+    .file-size { font-size: 12px; color: #888; margin-left: auto; }
+    .notif-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #888; }
+    .connection-status { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 12px; }
+    .connection-status.connected { background: #e8f5e9; color: #2e7d32; }
+    .connection-status.disconnected { background: #ffebee; color: #c62828; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .new-notif { animation: slideIn 0.3s ease-out; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Notificaciones en Tiempo Real</h1>
+      <div class="header-controls">
+        <div class="counter">
+          <span id="connection-status" class="connection-status disconnected">
+            <span class="status-dot"></span>Desconectado
+          </span>
+          <span>No leidas:</span>
+          <span id="unread-count" class="badge zero">0</span>
+        </div>
+        <button id="mark-all" class="btn" disabled>Marcar todas como leidas</button>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <input type="number" id="project-filter" placeholder="Filtrar por ID de proyecto...">
+      <button id="filter-btn" class="btn btn-small">Filtrar</button>
+      <button id="clear-filter" class="btn btn-small">Limpiar</button>
+    </div>
+
+    <div id="notifications" class="notifications-list">
+      <div class="empty-state"><p>Esperando notificaciones...</p></div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3000/api/notificaciones';
+    const WS_URL = 'http://localhost:3000';
+
+    // WebSocket
+    const socket = io(WS_URL);
+
+    socket.on('connect', () => {
+      console.log('Conectado');
+      document.getElementById('connection-status').className = 'connection-status connected';
+      document.getElementById('connection-status').innerHTML = '<span class="status-dot"></span>Conectado';
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Desconectado');
+      document.getElementById('connection-status').className = 'connection-status disconnected';
+      document.getElementById('connection-status').innerHTML = '<span class="status-dot"></span>Desconectado';
+    });
+
+    socket.on('nueva_notificacion', (notif) => {
+      console.log('Nueva notificacion:', notif);
+      mostrarNotificacion(notif, true);
+      actualizarContador();
+    });
+
+    socket.on('notificacion_proyecto', (notif) => {
+      console.log('Notificacion proyecto:', notif);
+      mostrarNotificacion(notif, true);
+      actualizarContador();
+    });
+
+    function getFileIcon(type) {
+      const icons = { pdf: 'PDF', image: 'IMG', document: 'DOC' };
+      return icons[type] || 'FILE';
+    }
+
+    function formatearFecha(fecha) {
+      const date = new Date(fecha);
+      const ahora = new Date();
+      const diff = ahora - date;
+      if (diff < 60000) return 'Ahora';
+      if (diff < 3600000) return 'Hace ' + Math.floor(diff / 60000) + ' min';
+      if (diff < 86400000) return 'Hace ' + Math.floor(diff / 3600000) + ' h';
+      return date.toLocaleDateString('es-ES');
+    }
+
+    function mostrarNotificacion(notif, isNew) {
+      const container = document.getElementById('notifications');
+      const emptyState = container.querySelector('.empty-state');
+      if (emptyState) emptyState.remove();
+
+      const div = document.createElement('div');
+      div.className = 'notification-card' + (!notif.leida ? ' unread' : '') + (isNew ? ' new-notif' : '');
+      div.dataset.id = notif.id;
+
+      let archivosHTML = '';
+      if (notif.datos && notif.datos.archivos && notif.datos.archivos.length > 0) {
+        const archivosList = notif.datos.archivos.map((arch) => {
+          return '<div class="file-item">' +
+            '<div class="file-info">' +
+              '<div class="file-icon ' + arch.tipo + '">' + getFileIcon(arch.tipo) + '</div>' +
+              '<div class="file-name">' + arch.nombre + '</div>' +
+              '<div class="file-size">' + arch.tamano + '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+
+        archivosHTML = '<div class="notif-files">' +
+          '<div class="notif-files-title">' + notif.datos.archivos.length + ' archivo(s)</div>' +
+          archivosList +
+        '</div>';
+      }
+
+      const proyectoBadge = (notif.datos && notif.datos.proyecto && notif.datos.proyecto.nombre)
+        ? '<span class="notif-project">' + notif.datos.proyecto.nombre + '</span>'
+        : '';
+
+      div.innerHTML = '<div class="notif-header">' +
+        '<div class="notif-title">' + notif.titulo + proyectoBadge + '</div>' +
+        '<span class="notif-time">' + formatearFecha(notif.fecha_creacion) + '</span>' +
+      '</div>' +
+      '<div class="notif-message">' + notif.mensaje + '</div>' +
+      archivosHTML +
+      (!notif.leida ? '<div class="notif-actions">' +
+        '<button class="btn btn-small" onclick="marcarComoLeida(' + notif.id + ')">Marcar como leida</button>' +
+        '</div>' : '');
+
+      container.prepend(div);
+
+      while (container.children.length > 50) {
+        container.removeChild(container.lastChild);
+      }
+    }
+
+    async function actualizarContador() {
+      try {
+        const proyectoId = document.getElementById('project-filter').value;
+        let url = API_URL + '/contar-no-leidas';
+        if (proyectoId) url += '?proyectoId=' + proyectoId;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const badge = document.getElementById('unread-count');
+        const markAllBtn = document.getElementById('mark-all');
+        badge.textContent = data.noLeidas;
+        badge.className = 'badge' + (data.noLeidas > 0 ? '' : ' zero');
+        markAllBtn.disabled = data.noLeidas === 0;
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+
+    async function cargarNotificaciones(proyectoId) {
+      try {
+        let url = API_URL;
+        if (proyectoId) url += '?proyectoId=' + proyectoId;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const container = document.getElementById('notifications');
+        container.innerHTML = '';
+
+        if (data.notificaciones.length === 0) {
+          container.innerHTML = '<div class="empty-state"><p>No hay notificaciones</p></div>';
+          return;
+        }
+
+        data.notificaciones.forEach((n) => mostrarNotificacion(n, false));
+        actualizarContador();
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+
+    window.marcarComoLeida = async function(notificationId) {
+      try {
+        await fetch(API_URL + '/' + notificationId + '/leer', { method: 'PATCH' });
+        const card = document.querySelector('[data-id="' + notificationId + '"]');
+        if (card) {
+          card.classList.remove('unread');
+          const actions = card.querySelector('.notif-actions');
+          if (actions) actions.remove();
+        }
+        actualizarContador();
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    };
+
+    document.getElementById('mark-all').addEventListener('click', async function() {
+      try {
+        const proyectoId = document.getElementById('project-filter').value;
+        await fetch(API_URL + '/marcar-todas-leidas', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(proyectoId ? { proyectoId: parseInt(proyectoId) } : {})
+        });
+
+        document.querySelectorAll('.notification-card.unread').forEach((card) => {
+          card.classList.remove('unread');
+          const actions = card.querySelector('.notif-actions');
+          if (actions) actions.remove();
+        });
+
+        actualizarContador();
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    });
+
+    document.getElementById('filter-btn').addEventListener('click', function() {
+      const proyectoId = document.getElementById('project-filter').value;
+      cargarNotificaciones(proyectoId || null);
+    });
+
+    document.getElementById('clear-filter').addEventListener('click', function() {
+      document.getElementById('project-filter').value = '';
+      cargarNotificaciones(null);
+    });
+
+    // Inicializar
+    cargarNotificaciones(null);
+  </script>
+</body>
+</html>
