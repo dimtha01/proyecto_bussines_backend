@@ -60,6 +60,10 @@ app.use("/api/notificaciones", notificacionesRoutes);
 app.use("/api/youtube", youtubeRoutes);
 app.use("/api/app", appRoutes);
 
+// Health check endpoint para Railway
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
 
 // Middleware para manejar rutas no encontradas
 app.use((req, res, next) => {

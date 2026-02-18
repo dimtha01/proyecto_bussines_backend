@@ -5,6 +5,11 @@ let io;
 // Inicializa el servidor de Socket.io
 export const initSocket = (httpServer) => {
   io = new Server(httpServer, {
+    // Configuración para Railway/Railway-like environments
+    transports: ["websocket", "polling"],
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    rememberUpgrade: true,
     cors: {
       origin: "*", // En producción, especificar los orígenes permitidos
       methods: ["GET", "POST"],
