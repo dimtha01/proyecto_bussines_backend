@@ -4,9 +4,19 @@ import path from "path";
 import { google } from "googleapis";
 import { fileURLToPath } from "url";
 import { pool } from "../db.js";
+import { emitNotification } from "../socket.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Formatear tamaño de archivo en bytes a formato legible
+const formatearTamano = (bytes) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const tamaños = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + tamaños[i];
+};
 
 // Rutas OAuth
 const TOKEN_PATH = path.join(__dirname, "..", "../config/token.json");
@@ -112,6 +122,55 @@ export const uploadVideoLocalController = async (req, res) => {
       `INSERT INTO archivos (id_proyecto, nombre_archivo, ruta_archivo, tipo_archivo) VALUES ?`,
       [values]
     );
+
+    // Obtener información del proyecto para la notificación
+    const [projectInfo] = await pool.query(
+      "SELECT id, nombre, nombre_cortos FROM proyectos WHERE id = ?",
+      [id_proyecto]
+    );
+
+    // Usar nombre_cortos si existe, sino el nombre completo
+    const nombreProyecto = projectInfo[0]?.nombre_cortos || projectInfo[0]?.nombre || `Proyecto #${id_proyecto}`;
+
+    const tamanoFormateado = formatearTamano(file.size);
+
+    // Crear notificación
+    const titulo = "Nuevo video subido";
+    const mensaje = `Se ha subido un nuevo video a "${nombreProyecto}" (${tamanoFormateado})`;
+
+    const datosNotificacion = {
+      proyecto: {
+        id: parseInt(id_proyecto),
+        nombre: nombreProyecto,
+      },
+      video: {
+        id: result.insertId,
+        nombre: file.originalname,
+        tamano: tamanoFormateado,
+        tamanoBytes: file.size,
+        mimetype: file.mimetype,
+        ruta: rutaParaBD,
+      },
+      fecha: new Date().toISOString(),
+    };
+
+    const [notifResult] = await pool.query(
+      `INSERT INTO notificaciones (id_proyecto, titulo, mensaje, tipo, datos)
+       VALUES (?, ?, ?, 'video_subido', ?)`,
+      [id_proyecto, titulo, mensaje, JSON.stringify(datosNotificacion)]
+    );
+
+    // Emitir notificación por WebSocket
+    emitNotification({
+      id: notifResult.insertId,
+      id_proyecto: parseInt(id_proyecto),
+      titulo,
+      mensaje,
+      tipo: "video_subido",
+      leida: false,
+      datos: datosNotificacion,
+      fecha_creacion: datosNotificacion.fecha,
+    });
 
     // URL pública (si montas app.use("/uploads", express.static(...))) [web:136]
     const baseUrl = `${req.protocol}://${req.get("host")}`;
