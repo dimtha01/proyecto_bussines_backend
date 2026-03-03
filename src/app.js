@@ -31,7 +31,7 @@ const app = express();
 
 // Middlewares
 const uploadsPath = path.join(__dirname, '../uploads');
-console.log("Serviendo desde:", uploadsPath); // Asegúrate de que esta línea esté antes de las rutas para servir archivos estáticos
+console.log("Serviendo desde:", uploadsPath);  // Asegúrate de que esta línea esté antes de las rutas para servir archivos estáticos
 app.use('/uploads', express.static(uploadsPath));
 
 app.use(cors()); // Habilita CORS para todas las rutas
